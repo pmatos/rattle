@@ -1,0 +1,10 @@
+* Setup GH Actions
+  * Setup clang static analyzis
+  * Setup LGTM
+  * Setup clang-format as pre-commit hook
+  * Setup running under valgrind
+  * Setup fuzzer
+* Setup testsuite
+* Setup clang-format config
+* Setup Fossa.com for licensing checks
+* Setup esbmc for property analysis

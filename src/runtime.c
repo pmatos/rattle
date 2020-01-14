@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+// Runtime entry point.
+// The compiler generated code is linked here.
+
 /* define all scheme constants */
 #define bool_f 0x2f
 #define bool_t 0x6f
