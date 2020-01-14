@@ -7,8 +7,11 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <ctype.h>
+#include <assert.h>
 
 #include "config.h"
+
+static const char *CC = "/usr/bin/gcc";
 
 // Compiler main entry point file
 void __attribute__((noreturn))
@@ -77,7 +80,7 @@ main(int argc, char *argv[]) {
   if (evaluate_p)
     {
       int ncommands = argc - optind;
-      char **commands = malloc (ncommands * sizeof(*commands));
+      char **commands = malloc ((ncommands + 1) * sizeof(*commands));
       for (int i = 0; i < ncommands; i++)
         commands[i] = strdup(argv[optind + i]);
 
@@ -89,6 +92,135 @@ main(int argc, char *argv[]) {
     compile(input, output);
 
   return 0;
+}
+
+// Parsing
+enum sch_type { SCH_NULL, SCH_FIXNUM, SCH_BOOL, SCH_CHAR };
+
+struct sch_imm
+{
+  enum sch_type type;
+  uint64_t value;
+};
+
+char *
+skip_space (char *input)
+{
+  while (isspace (*input)) input++;
+  return input;
+}
+
+struct sch_imm *
+parse_imm_bool (const char **input)
+{
+  struct sch_imm *imm = NULL;
+  if (*input[0] == '#')
+    {
+      if (*input[1] == 't')
+        {
+          imm = malloc (sizeof(*imm));
+          imm->type = SCH_BOOL;
+          imm->value = 1;
+          *input += 2;
+        }
+      else if (*input[1] == 'f')
+        {
+          imm = malloc (sizeof(*imm));
+          imm->type = SCH_BOOL;
+          imm->value = 0;
+          *input += 2;
+        }
+    }
+  return imm;
+}
+
+#define FIXNUM_MIN -2305843009213693952LL
+#define FIXNUM_MAX  2305843009213693951LL
+
+struct sch_imm *
+parse_imm_fixnum (const char **input)
+{
+  struct sch_imm *imm = NULL;
+  const char *sign  = NULL;
+  const char *end   = NULL;
+
+  if (**input == '+' || **input == '-')
+    {
+      sign = *input;
+      end = *input + 1;
+    }
+  while (isdigit(end++));
+
+  unsigned long long v = 0;
+  while (--end != sign)
+      v = (v * 10) + *end;
+
+  if (v <= FIXNUM_MAX)
+    {
+      imm = malloc(sizeof(*imm));
+      imm->type = SCH_FIXNUM;
+      imm->value = (sign && *sign == '-') ? -v : v;
+    }
+
+  return imm;
+}
+
+struct sch_imm *
+parse_imm_char (const char **input)
+{
+  struct sch_imm *imm = NULL;
+
+  if (*input[0] == '#' &&
+      *input[1] == '\\' &&
+      isascii(*input[2]))
+    {
+      imm = malloc(sizeof(*imm));
+      imm->type = SCH_CHAR;
+      imm->value = *input[2];
+      *input += 3;
+    }
+
+  return imm;
+}
+
+struct sch_imm *
+parse_imm_null (const char **input)
+{
+  struct sch_imm *imm = NULL;
+
+  if (*input[0] == 'n' &&
+      *input[1] == 'u' &&
+      *input[2] == 'l' &&
+      *input[3] == 'l')
+    {
+      imm = malloc (sizeof (*imm));
+      imm->type = SCH_NULL;
+      imm->value = 0;
+      *input += 4;
+    }
+
+  return imm;
+}
+
+struct sch_imm *
+parse_imm (const char **input)
+{
+  struct sch_imm *imm = parse_imm_null (input);
+
+  if (!imm)
+    {
+      imm = parse_imm_char (input);
+    }
+  if (!imm)
+    {
+      imm = parse_imm_fixnum (input);
+    }
+  if (!imm)
+    {
+      imm = parse_imm_bool (input);
+    }
+
+    return imm;
 }
 
 // Evaluation
@@ -105,6 +237,16 @@ evaluate(char **cmds)
 }
 
 // Compilation
+void emit_immediate(uint64_t imm, FILE *f)
+{
+  fprintf (f, "    .text\n");
+  fprintf (f, "    .globl scheme_entry\n");
+  fprintf (f, "    .type scheme_entry, @function\n");
+  fprintf (f, "scheme_entry:\n");
+  fprintf (f, "    movl $%" PRIu64 ", %%eax\n", imm);
+  fprintf (f, "    ret\n");
+}
+
 void
 compile (const char *i __attribute__((unused)),
          const char *o __attribute__((unused)))
@@ -112,164 +254,90 @@ compile (const char *i __attribute__((unused)),
   // todo
 }
 
-void
-compile_expression (const char *e)
-{
-  unsigned long long num = 0;
-
-  errno = 0;
-  num = strtoull(e, NULL, 0);
-
-  if (errno == 0)
-    {
-      uint64_t num64 = num & INT64_MAX;
-
-      if (num64 == num)
-        {
-          printf ("    .text\n");
-          printf ("    .globl scheme_entry\n");
-          printf ("    .type scheme_entry, @function\n");
-          printf ("scheme_entry:\n");
-          printf ("    movl $%" PRIu64 ", %%eax\n", num64);
-          printf ("    ret\n");
-        }
-    }
-  else
-    fprintf (stderr, "error\n");
-}
-
-void emit_immediate(uint64_t imm)
-{
-  printf ("    .text\n");
-  printf ("    .globl scheme_entry\n");
-  printf ("    .type scheme_entry, @function\n");
-  printf ("scheme_entry:\n");
-  printf ("    movl $%" PRIu64 ", %%eax\n", imm);
-  printf ("    ret\n");
-}
 
 void
-compile_fixnum (uint64_t n)
+compile_fixnum (uint64_t n, FILE *f)
 {
   // Fixnums have two bottom bits as 0
-  emit_immediate (n << 2);
+  emit_immediate (n << 2, f);
 }
 
 void
-compile_char (char c)
+compile_char (char c, FILE *f)
 {
   // Chars have the lowest byte as 0x0f
-  emit_immediate ((c << 8) | 0x0f);
+  emit_immediate ((c << 8) | 0x0f, f);
 }
 
 void
-compile_bool (bool b)
+compile_bool (bool b, FILE* f)
 {
   // Booleans are represented as:
   // false: 00101111 (0x2f)
   // true:  01101111 (0x6f)
   if (b)
-    emit_immediate (0x6f);
+    emit_immediate (0x6f, f);
   else
-    emit_immediate (0x2f);
+    emit_immediate (0x2f, f);
 }
 
 void
-compile_null()
+compile_null(FILE* f)
 {
   // null is represented as 0x3f
-  emit_immediate (0x3f);
+  emit_immediate (0x3f, f);
 }
 
-
-// Parsing
-enum sch_type { SCH_NULL, SCH_FIXNUM, SCH_BOOL, SCH_CHAR };
-
-struct sch_imm
+void
+compile_expression (const char *e)
 {
-  enum sch_type type;
-  uint64_t value;
-};
+  struct sch_imm *imm = parse_imm (&e);
 
-char *skip_space (char *input)
-{
-  while (isspace (*input)) input++;
-  return input;
-}
+  char *template = "rattleXXXXXX";
+  int idesc = mkstemp (template);
+  int odesc = mkstemp (template);
+  FILE *i = fdopen (idesc, "w");
 
-bool parse_imm_bool (const char **input, struct sch_imm *imm)
-{
-  if (*input[0] == '#')
-    {
-      if (*input[1] == 't')
-        {
-          imm = malloc (sizeof(*imm));
-          imm->type = SCH_BOOL;
-          imm->value = 1;
-          *input += 2;
-          return true;
-        }
-      else if (*input[1] == 'f')
-        {
-          imm = malloc (sizeof(*imm));
-          imm->type = SCH_BOOL;
-          imm->value = 0;
-          *input += 2;
-          return true;
-        }
-      return false;
-    }
-  return false;
-}
-
-#define FIXNUM_MIN -2305843009213693952LL
-#define FIXNUM_MAX  2305843009213693951LL
-
-
-bool parse_imm_fixnum (const char **input, struct sch_imm *imm)
-{
-  const char *sign  = NULL;
-  const char *start = NULL;
-  const char *end   = NULL;
-
-  if (**input == '+' || **input == '-')
-    {
-      sign = *input;
-      start = *input + 1;
-      end = start;
-    }
-  while (isdigit(*end++));
+  // close descriptor opened by mkstemp
+  close (odesc);
   
-}
-
-bool parse_imm_char (const char **input, struct sch_imm *imm)
-{
-  if (*input[0] == '#' &&
-      *input[1] == '\\' &&
-      isascii(*input[2]))
+  if (imm)
     {
-      imm = malloc(sizeof(*imm));
-      imm->type = SCH_CHAR;
-      imm->value = *input[2];
-      *input += 3;
-      return true;
+      switch (imm->type)
+        {
+        case SCH_NULL:
+          compile_null (f);
+          break;
+        case SCH_BOOL:
+          compile_bool (imm->value, f);
+          break;
+        case SCH_CHAR:
+          compile_char (imm->value, f);
+          break;
+        case SCH_FIXNUM:
+          compile_char (imm->value, f);
+          break;
+        default:
+          // unreachable
+          assert (false);
+        }
+      fclose (f);
+      free (imm);
     }
-  return false;
-}
-
-bool parse_imm_null (const char **input, struct sch_imm *imm)
-{
-  if (*input[0] == 'n' &&
-      *input[1] == 'u' &&
-      *input[2] == 'l' &&
-      *input[3] == 'l')
+  else
     {
-      imm = malloc (sizeof (*imm));
-      imm->type = SCH_NULL;
-      imm->value = 0;
-      *input += 4;
-      return true;
+      fclose (f);
+      fprintf (stderr, "error: cannot parse `%s'\n", e);
+      exit (EXIT_FAILURE);
     }
 
-  return false;
+  // Now compile file and link with runtime
+  if (fork () == 0)
+    {
+      // inside child
+      execl (CC, "gcc", "-o", 
+    }
+
+  
+  
 }
