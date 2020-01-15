@@ -14,3 +14,5 @@ target_include_directories(rattle PUBLIC
   "${PROJECT_BINARY_DIR}"
   )
 configure_file(config.h.in config.h)
+
+add_library(runtime STATIC runtime/runtime.c)

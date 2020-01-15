@@ -1,6 +1,3 @@
-* Compile runtime as a static library
-  * Then compilation in driver can find static library path to link to during runtime
-
 * Setup GH Actions
   * Setup clang static analyzis
   * Setup LGTM

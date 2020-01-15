@@ -8,6 +8,8 @@
 #include <inttypes.h>
 #include <ctype.h>
 #include <assert.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include "config.h"
 
@@ -27,7 +29,7 @@ help (const char *prog) {
 }
 
 // Prototypes
-void evaluate(char **);
+void evaluate(const char *);
 void compile (const char *, const char*);
 void compile_expression (const char *);
 
@@ -80,12 +82,14 @@ main(int argc, char *argv[]) {
   if (evaluate_p)
     {
       int ncommands = argc - optind;
-      char **commands = malloc ((ncommands + 1) * sizeof(*commands));
-      for (int i = 0; i < ncommands; i++)
-        commands[i] = strdup(argv[optind + i]);
+      if (ncommands > 1)
+        {
+          fprintf (stderr, "too many arguments\n");
+          exit (EXIT_FAILURE);
+        }
 
-      commands[ncommands] = NULL;
-      evaluate(commands);
+      const char *cmd = argv[optind];
+      evaluate(cmd);
     }
 
   if (compile_p)
@@ -100,7 +104,7 @@ enum sch_type { SCH_NULL, SCH_FIXNUM, SCH_BOOL, SCH_CHAR };
 struct sch_imm
 {
   enum sch_type type;
-  uint64_t value;
+  int64_t value;
 };
 
 char *
@@ -114,20 +118,13 @@ struct sch_imm *
 parse_imm_bool (const char **input)
 {
   struct sch_imm *imm = NULL;
-  if (*input[0] == '#')
+  if ((*input)[0] == '#')
     {
-      if (*input[1] == 't')
+      if ((*input)[1] == 't' || (*input)[1] == 'f')
         {
           imm = malloc (sizeof(*imm));
           imm->type = SCH_BOOL;
-          imm->value = 1;
-          *input += 2;
-        }
-      else if (*input[1] == 'f')
-        {
-          imm = malloc (sizeof(*imm));
-          imm->type = SCH_BOOL;
-          imm->value = 0;
+          imm->value = ((*input)[1] == 't');
           *input += 2;
         }
     }
@@ -142,24 +139,28 @@ parse_imm_fixnum (const char **input)
 {
   struct sch_imm *imm = NULL;
   const char *sign  = NULL;
-  const char *end   = NULL;
+  bool seen_num = false;
+  const char *ptr = *input;
 
   if (**input == '+' || **input == '-')
     {
       sign = *input;
-      end = *input + 1;
+      ptr++;
     }
-  while (isdigit(end++));
-
   unsigned long long v = 0;
-  while (--end != sign)
-      v = (v * 10) + *end;
+  for (; isdigit(*ptr); ptr++)
+    {
+      seen_num = true;
+      v = (v * 10) + (*ptr - '0');
+    }
 
-  if (v <= FIXNUM_MAX)
+  if (seen_num && v <= FIXNUM_MAX)
     {
       imm = malloc(sizeof(*imm));
       imm->type = SCH_FIXNUM;
-      imm->value = (sign && *sign == '-') ? -v : v;
+      imm->value = v;
+      if (sign && *sign == '-')
+        imm->value = -imm->value;
     }
 
   return imm;
@@ -170,8 +171,8 @@ parse_imm_char (const char **input)
 {
   struct sch_imm *imm = NULL;
 
-  if (*input[0] == '#' &&
-      *input[1] == '\\' &&
+  if ((*input)[0] == '#' &&
+      (*input)[1] == '\\' &&
       isascii(*input[2]))
     {
       imm = malloc(sizeof(*imm));
@@ -188,10 +189,10 @@ parse_imm_null (const char **input)
 {
   struct sch_imm *imm = NULL;
 
-  if (*input[0] == 'n' &&
-      *input[1] == 'u' &&
-      *input[2] == 'l' &&
-      *input[3] == 'l')
+  if ((*input)[0] == 'n' &&
+      (*input)[1] == 'u' &&
+      (*input)[2] == 'l' &&
+      (*input)[3] == 'l')
     {
       imm = malloc (sizeof (*imm));
       imm->type = SCH_NULL;
@@ -207,10 +208,7 @@ parse_imm (const char **input)
 {
   struct sch_imm *imm = parse_imm_null (input);
 
-  if (!imm)
-    {
-      imm = parse_imm_char (input);
-    }
+  // char needs to be the last one to be parsed
   if (!imm)
     {
       imm = parse_imm_fixnum (input);
@@ -219,21 +217,19 @@ parse_imm (const char **input)
     {
       imm = parse_imm_bool (input);
     }
+  if (!imm)
+    {
+      imm = parse_imm_char (input);
+    }
 
     return imm;
 }
 
 // Evaluation
 void
-evaluate(char **cmds)
+evaluate(const char *cmd)
 {
-  int i = 0;
-  char *cmd = cmds[i];
-  while (cmd)
-    {
-      compile_expression(cmd);
-      cmd = cmds[++i];
-    }
+  compile_expression(cmd);
 }
 
 // Compilation
@@ -243,7 +239,12 @@ void emit_immediate(uint64_t imm, FILE *f)
   fprintf (f, "    .globl scheme_entry\n");
   fprintf (f, "    .type scheme_entry, @function\n");
   fprintf (f, "scheme_entry:\n");
-  fprintf (f, "    movl $%" PRIu64 ", %%eax\n", imm);
+
+  if (imm > 4294967295)
+    fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", imm);
+  else
+    fprintf (f, "    movl $%" PRIu64 ", %%eax\n", imm);
+
   fprintf (f, "    ret\n");
 }
 
@@ -293,51 +294,87 @@ compile_expression (const char *e)
 {
   struct sch_imm *imm = parse_imm (&e);
 
-  char *template = "rattleXXXXXX";
-  int idesc = mkstemp (template);
-  int odesc = mkstemp (template);
-  FILE *i = fdopen (idesc, "w");
+  char itemplate[] = "/tmp/rattleXXXXXX.s";
+  char otemplate[] = "/tmp/rattleXXXXXX";
+  int ifd = mkstemps (itemplate, 2);
+  int ofd = mkstemp (otemplate);
 
-  // close descriptor opened by mkstemp
-  close (odesc);
-  
+  if (ifd == -1 || ofd == -1)
+    {
+      fprintf (stderr, "error creating temporary files for compilation\n");
+      exit (EXIT_FAILURE);
+    }
+
+  FILE *i = fdopen (ifd, "w");
+
   if (imm)
     {
       switch (imm->type)
         {
         case SCH_NULL:
-          compile_null (f);
+          compile_null (i);
           break;
         case SCH_BOOL:
-          compile_bool (imm->value, f);
+          compile_bool (imm->value, i);
           break;
         case SCH_CHAR:
-          compile_char (imm->value, f);
+          compile_char (imm->value, i);
           break;
         case SCH_FIXNUM:
-          compile_char (imm->value, f);
+          compile_fixnum (imm->value, i);
           break;
         default:
           // unreachable
           assert (false);
         }
-      fclose (f);
+      // close file
+      fclose (i);
+      // free immediate value
       free (imm);
     }
   else
     {
-      fclose (f);
+      unlink (otemplate);
+      unlink (itemplate);
+      close (ofd);
+      close (ifd);
       fprintf (stderr, "error: cannot parse `%s'\n", e);
       exit (EXIT_FAILURE);
     }
 
-  // Now compile file and link with runtime
-  if (fork () == 0)
-    {
-      // inside child
-      execl (CC, "gcc", "-o", 
-    }
+  // close ofd so gcc can write to it
+  close (ofd);
 
-  
-  
+  // Now compile file and link with runtime
+  {
+    int child = fork ();
+    if (child == 0)
+      {
+        // inside child
+        execl (CC, CC, "-static", "-o", otemplate, itemplate, "libruntime.a", (char *) NULL);
+        // unreachable
+        assert (false);
+      }
+
+    // wait for child to complete compilation
+    waitpid (child, NULL, 0);
+  }
+
+  // remove input file and close port
+  unlink (itemplate);
+  close (ifd);
+  {
+    int child = fork ();
+    if (child == 0)
+      {
+        execl (otemplate, otemplate, (char *) NULL);
+        // unreachable
+        assert (false);
+      }
+
+    waitpid (child, NULL, 0);
+  }
+
+  // delete output file
+  unlink (otemplate);
 }
