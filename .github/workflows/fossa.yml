@@ -1,0 +1,13 @@
+name: Fossa
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    - uses: actions/checkout@v1
+    - name: Install fossa-cli
+      run: curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | bash
+    - name: Run fossa
+      run: fossa test
