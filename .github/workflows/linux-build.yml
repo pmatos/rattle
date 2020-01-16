@@ -1,0 +1,19 @@
+name: Release CI
+
+on: [push, pull_request]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    container: debian-slim:latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Create build dir
+      run: mkdir build
+    - name: Configure
+      working-directory: ./build
+      run: cmake ..
+    - name: Build
+      run: make
