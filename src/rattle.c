@@ -123,6 +123,11 @@ parse_imm_bool (const char **input)
       if ((*input)[1] == 't' || (*input)[1] == 'f')
         {
           imm = malloc (sizeof(*imm));
+          if (!imm)
+            {
+              fprintf (stderr, "out of memory\n");
+              exit (EXIT_FAILURE);
+            }
           imm->type = SCH_BOOL;
           imm->value = ((*input)[1] == 't');
           *input += 2;
@@ -157,6 +162,12 @@ parse_imm_fixnum (const char **input)
   if (seen_num && v <= FIXNUM_MAX)
     {
       imm = malloc(sizeof(*imm));
+      if (!imm)
+        {
+          fprintf (stderr, "out of memory\n");
+          exit (EXIT_FAILURE);
+        }
+
       imm->type = SCH_FIXNUM;
       imm->value = v;
       if (sign && *sign == '-')
@@ -176,6 +187,12 @@ parse_imm_char (const char **input)
       isascii(*input[2]))
     {
       imm = malloc(sizeof(*imm));
+      if (!imm)
+        {
+          fprintf (stderr, "out of memory\n");
+          exit (EXIT_FAILURE);
+        }
+
       imm->type = SCH_CHAR;
       imm->value = *input[2];
       *input += 3;
@@ -195,6 +212,12 @@ parse_imm_null (const char **input)
       (*input)[3] == 'l')
     {
       imm = malloc (sizeof (*imm));
+      if (!imm)
+        {
+          fprintf (stderr, "out of memory\n");
+          exit (EXIT_FAILURE);
+        }
+
       imm->type = SCH_NULL;
       imm->value = 0;
       *input += 4;
