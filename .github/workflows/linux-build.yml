@@ -3,7 +3,7 @@ name: Release CI
 on: [push, pull_request]
 
 jobs:
-  build:
+  buildtest:
 
     runs-on: ubuntu-latest
     container: debian:buster-slim
@@ -22,3 +22,14 @@ jobs:
     - name: Build
       working-directory: ./build
       run: ninja
+    - uses: Bogdanp/setup-racket@v0.5
+      with:
+        architecture: 'x64'
+        distribution: 'full'
+        variant: 'CS'
+        version: '7.5'
+    - name: Test
+      working-directory: ./build
+      run: |
+        raco make ../tests/script/test.rkt
+        racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/fixnum.tests
