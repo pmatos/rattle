@@ -12,4 +12,6 @@ jobs:
       run: |
         curl -H 'Cache-Control: no-cache' https://raw.githubusercontent.com/fossas/fossa-cli/master/install.sh | bash
     - name: Run fossa
+      env:
+        FOSSA_API_KEY: ${{ secrets.FOSSA_API_KEY }}
       run: fossa test
