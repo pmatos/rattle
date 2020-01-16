@@ -10,10 +10,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: apt-get install -y cmake ninja
     - name: Create build dir
       run: mkdir build
     - name: Configure
       working-directory: ./build
-      run: cmake ..
+      run: cmake -GNinja ..
     - name: Build
-      run: make
+      run: ninja
