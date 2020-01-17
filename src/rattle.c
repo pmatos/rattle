@@ -194,7 +194,7 @@ parse_imm_char (const char **input)
         }
 
       imm->type = SCH_CHAR;
-      imm->value = *input[2];
+      imm->value = (*input)[2];
       *input += 3;
     }
 

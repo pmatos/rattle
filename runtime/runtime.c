@@ -28,7 +28,7 @@ print_ptr(ptr x)
   if ((x & fx_mask) == fx_tag)
     printf ("%" PRIi64, (int64_t) ((uint64_t) x) >> fx_shift);
   else if ((x & ch_mask) == ch_tag)
-    printf ("#\\%c", (char) ((uint64_t) x) >> ch_shift);
+    printf ("#\\%c", (char) (((uint64_t) x) >> ch_shift));
   else if (x == boolf)
     printf ("#f");
   else if (x == boolt)
