@@ -29,7 +29,7 @@
      (define out
        (with-output-to-string
          (lambda ()
-           (unless (system (format "~a ~a" cmd (test-input t)))
+           (unless (system (format "~a '~a'" cmd (test-input t)))
              (return (result #true ""))))))
      (result #false (string-trim out)))))
 
