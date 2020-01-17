@@ -34,6 +34,6 @@ jobs:
         raco make ../tests/script/test.rkt
         racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/fixnum.tests
     - uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
           
