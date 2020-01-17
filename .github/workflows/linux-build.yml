@@ -18,7 +18,7 @@ jobs:
       run: mkdir build
     - name: Configure
       working-directory: ./build
-      run: cmake -GNinja -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8 ..
+      run: cmake -GNinja -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8 -DCMAKE_BUILD_TYPE=Coverage ..
     - name: Build
       working-directory: ./build
       run: ninja
