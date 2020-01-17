@@ -13,7 +13,7 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y cmake ninja-build gcc gcc-8 g++ g++-8
+        apt-get install -y cmake ninja-build gcc gcc-8 g++ g++-8 sudo
     - name: Create build dir
       run: mkdir build
     - name: Configure
