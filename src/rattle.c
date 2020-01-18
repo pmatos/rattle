@@ -374,7 +374,8 @@ compile_expression (const char *e)
     if (child == 0)
       {
         // inside child
-        execl (CC, CC, "-static", "-o", otemplate, itemplate, "libruntime.a", (char *) NULL);
+        execl (CC, CC, "-static", "-o", otemplate, itemplate, "runtime/libruntime.a", (char *) NULL);
+
         // unreachable
         assert (false);
       }
