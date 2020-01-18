@@ -3,7 +3,7 @@ name: Release CI
 on: [push, pull_request]
 
 jobs:
-  buildtest:
+  buildtest-glibc:
 
     runs-on: ubuntu-latest
     container: debian:buster-slim
@@ -41,6 +41,39 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
           
+
+  buildtest-musl:
+
+    runs-on: ubuntu-latest
+    container:
+      image: pmatos/alpine-racket:latest
+      options: --rm
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apk update
+        apk add cmake ninja gcc g++ sudo curl
+    - name: Create build dir
+      run: mkdir build
+    - name: Configure
+      working-directory: ./build
+      run: cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
+    - name: Build
+      working-directory: ./build
+      run: ninja
+    - name: Test fixnums
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/fixnum.tests
+    - name: Test booleans
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/boolean.tests
+    - name: Test characters
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/char.tests
+
+
   buildtest-vg:
 
     runs-on: ubuntu-latest
@@ -75,4 +108,4 @@ jobs:
     - name: Test characters
       working-directory: ./build
       run: racket ../tests/script/test.rkt -c "valgrind -q ./rattle -e --" ../tests/char.tests
-          
+      
