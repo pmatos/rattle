@@ -184,7 +184,7 @@ parse_imm_char (const char **input)
 
   if ((*input)[0] == '#' &&
       (*input)[1] == '\\' &&
-      isascii(*input[2]))
+      isascii((*input)[2]))
     {
       imm = malloc(sizeof(*imm));
       if (!imm)
