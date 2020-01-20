@@ -1,3 +1,2 @@
-codecov:
-  fixes:
-    - "../src/::src/"
+fixes:
+  - "../src/::src/"
