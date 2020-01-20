@@ -41,3 +41,38 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
           
+  buildtest-vg:
+
+    runs-on: ubuntu-latest
+    container: debian:buster-slim
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apt-get update 
+        apt-get install -y cmake ninja-build gcc gcc-8 g++ g++-8 sudo curl valgrind
+    - name: Create build dir
+      run: mkdir build
+    - name: Configure
+      working-directory: ./build
+      run: cmake -GNinja -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8 -DCMAKE_BUILD_TYPE=Debug ..
+    - name: Build
+      working-directory: ./build
+      run: ninja
+    - uses: Bogdanp/setup-racket@v0.5
+      with:
+        architecture: 'x64'
+        distribution: 'full'
+        variant: 'CS'
+        version: '7.5'
+    - name: Test fixnums
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "valgrind ./rattle -e --" ../tests/fixnum.tests
+    - name: Test booleans
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "valgrind ./rattle -e --" ../tests/boolean.tests
+    - name: Test characters
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "valgrind ./rattle -e --" ../tests/char.tests
+          
