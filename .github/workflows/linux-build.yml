@@ -41,7 +41,8 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         flags: integration
-        fail_ci: true
+        fail_ci_if_error: true
+        yml: ./.codecov.yml
           
   buildtest-vg:
 
