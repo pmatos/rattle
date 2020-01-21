@@ -193,8 +193,7 @@ parse_imm_char (const char **input)
         }
 
       imm->type = SCH_CHAR;
-
-      // Simple case of char #\X where X is an ascii character
+      ptr += 2;
       if (!strncmp (ptr, "alarm", 5))
         {
           imm->value = 0x7;
@@ -240,7 +239,7 @@ parse_imm_char (const char **input)
           imm->value = 0x9;
           *input += 3;
         }
-      else if (isascii(ptr[2]))
+      else if (isascii(ptr[2])) // Simple case: #\X where X is ascii
         {
           imm->value = (*input)[2];
           *input += 3;
