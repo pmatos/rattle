@@ -181,10 +181,9 @@ struct sch_imm *
 parse_imm_char (const char **input)
 {
   struct sch_imm *imm = NULL;
+  const char *ptr = *input;
 
-  if ((*input)[0] == '#' &&
-      (*input)[1] == '\\' &&
-      isascii((*input)[2]))
+  if (ptr[0] == '#' && ptr[1] == '\\')
     {
       imm = malloc(sizeof(*imm));
       if (!imm)
@@ -194,8 +193,64 @@ parse_imm_char (const char **input)
         }
 
       imm->type = SCH_CHAR;
-      imm->value = (*input)[2];
-      *input += 3;
+
+      // Simple case of char #\X where X is an ascii character
+      if (strncmp (ptr, "alarm", 5))
+        {
+          imm->value = 0x7;
+          *input += 5;
+        }
+      else if (strncmp (ptr, "backspace", 9))
+        {
+          imm->value = 0x8;
+          *input += 9;
+        }
+      else if (strncmp (ptr, "delete", 6))
+        {
+          imm->value = 0x7f;
+          *input += 6;
+        }
+      else if (strncmp (ptr, "escape", 6))
+        {
+          imm->value = 0x1b;
+          *input += 6;
+        }
+      else if (strncmp (ptr, "newline", 7))
+        {
+          imm->value = 0xa;
+          *input += 7;
+        }
+      else if (strncmp (ptr, "null", 4))
+        {
+          imm->value = 0x0;
+          *input += 4;
+        }
+      else if (strncmp (ptr, "return", 6))
+        {
+          imm->value = 0xd;
+          *input += 6;
+        }
+      else if (strncmp (ptr, "space", 5))
+        {
+          imm->value = (uint64_t)' ';
+          *input += 5;
+        }
+      else if (strncmp (ptr, "tab", 3))
+        {
+          imm->value = 0x9;
+          *input += 3;
+        }
+      else if (isascii(ptr[2]))
+        {
+          imm->value = (*input)[2];
+          *input += 3;
+        }
+      else
+        {
+          free (imm);
+          fprintf (stderr, "failed to parse `%s'", *input);
+          exit (EXIT_FAILURE);
+        }
     }
 
   return imm;

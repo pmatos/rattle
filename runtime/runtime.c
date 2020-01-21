@@ -23,12 +23,49 @@ extern ptr scheme_entry (void);
 #define fx_shift 2
 
 static void
+print_char (uint64_t code) {
+  switch (code)
+    {
+    case 0x7:
+      printf ("#\\alarm");
+      break;
+    case 0x8:
+      printf ("#\\backspace");
+      break;
+    case 0x7f:
+      printf ("#\\delete");
+      break;
+    case 0x1b:
+      printf ("#\\escape");
+      break;
+    case 0xa:
+      printf ("#\\newline");
+      break;
+    case 0x0:
+      printf ("#\\null");
+      break;
+    case 0xd:
+      printf ("#\\return");
+      break;
+    case ' ':
+      printf ("#\\space");
+      break;
+    case 0x9:
+      printf ("#\\tab");
+      break;
+    default:
+      printf ("#\\%c", (char) code);
+      break;
+    }
+}
+
+static void
 print_ptr(ptr x)
 {
   if ((x & fx_mask) == fx_tag)
     printf ("%" PRIi64, (int64_t) ((uint64_t) x) >> fx_shift);
   else if ((x & ch_mask) == ch_tag)
-    printf ("#\\%c", (char) (((uint64_t) x) >> ch_shift));
+    print_char (((uint64_t) x) >> ch_shift);
   else if (x == boolf)
     printf ("#f");
   else if (x == boolt)
