@@ -30,14 +30,14 @@ jobs:
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/boolean.tests
     - name: Test characters
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
-    - uses: codecov/codecov-action@v1
-      with:
-        token: ${{ secrets.CODECOV_TOKEN }}
-        flags: integration
-        fail_ci_if_error: true
-        yml: ./.codecov.yml
+    - name: Send coverage report
+      env:
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      run: |
+        wget -O codecov.sh https://codecov.io/bash
+        chmod +x codecov.sh
+        ./codecov.sh -F integration -y .codecov.yml -Z
           
-
   buildtest-musl:
 
     runs-on: ubuntu-latest
