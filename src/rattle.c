@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Paulo Matos
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -181,10 +197,9 @@ struct sch_imm *
 parse_imm_char (const char **input)
 {
   struct sch_imm *imm = NULL;
+  const char *ptr = *input;
 
-  if ((*input)[0] == '#' &&
-      (*input)[1] == '\\' &&
-      isascii(*input[2]))
+  if (ptr[0] == '#' && ptr[1] == '\\')
     {
       imm = malloc(sizeof(*imm));
       if (!imm)
@@ -194,8 +209,63 @@ parse_imm_char (const char **input)
         }
 
       imm->type = SCH_CHAR;
-      imm->value = *input[2];
-      *input += 3;
+      ptr += 2;
+      if (!strncmp (ptr, "alarm", 5))
+        {
+          imm->value = 0x7;
+          *input += 5;
+        }
+      else if (!strncmp (ptr, "backspace", 9))
+        {
+          imm->value = 0x8;
+          *input += 9;
+        }
+      else if (!strncmp (ptr, "delete", 6))
+        {
+          imm->value = 0x7f;
+          *input += 6;
+        }
+      else if (!strncmp (ptr, "escape", 6))
+        {
+          imm->value = 0x1b;
+          *input += 6;
+        }
+      else if (!strncmp (ptr, "newline", 7))
+        {
+          imm->value = 0xa;
+          *input += 7;
+        }
+      else if (!strncmp (ptr, "null", 4))
+        {
+          imm->value = 0x0;
+          *input += 4;
+        }
+      else if (!strncmp (ptr, "return", 6))
+        {
+          imm->value = 0xd;
+          *input += 6;
+        }
+      else if (!strncmp (ptr, "space", 5))
+        {
+          imm->value = (uint64_t)' ';
+          *input += 5;
+        }
+      else if (!strncmp (ptr, "tab", 3))
+        {
+          imm->value = 0x9;
+          *input += 3;
+        }
+      else if (isascii(ptr[2])) // Simple case: #\X where X is ascii
+        {
+          imm->value = (*input)[2];
+          *input += 3;
+        }
+      else
+        {
+          free (imm);
+          fprintf (stderr, "failed to parse `%s'", *input);
+          exit (EXIT_FAILURE);
+        }
     }
 
   return imm;
@@ -374,7 +444,8 @@ compile_expression (const char *e)
     if (child == 0)
       {
         // inside child
-        execl (CC, CC, "-static", "-o", otemplate, itemplate, "libruntime.a", (char *) NULL);
+        execl (CC, CC, "-static", "-o", otemplate, itemplate, "runtime/libruntime.a", (char *) NULL);
+
         // unreachable
         assert (false);
       }
