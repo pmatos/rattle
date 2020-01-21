@@ -16,10 +16,11 @@
 
 #lang racket/base
 ;; ---------------------------------------------------------------------------------------------------
-(require 2htdp/batch-io
-         racket/port
+
+(require racket/port
          racket/system
          racket/string)
+
 ;; ---------------------------------------------------------------------------------------------------
 
 ; Read a file that looks like
@@ -58,6 +59,17 @@
   (if (equal? output "error")
       (test input #true "")
       (test input #false output)))
+
+(define (read-file f)
+  (apply string
+         (reverse
+          (call-with-input-file f
+            (lambda (in)
+              (let loop ([cs '()])
+                (define c (read-char in))
+                (if (eof-object? c)
+                    cs
+                    (loop (cons c cs)))))))))
 
 (define (read-tests f)
   (map read-test (string-split (read-file f) "--")))
