@@ -183,3 +183,21 @@
 #\} => #\}
 --
 #\~ => #\~
+--
+#\space => #\space
+--
+#\alarm => #\alarm
+--
+#\backspace => #\backspace
+--
+#\delete => #\delete
+--
+#\escape => #\escape
+--
+#\newline => #\newline
+--
+#\null => #\null
+--
+#\return => #\return
+--
+#\tab => #\tab
