@@ -25,14 +25,11 @@ jobs:
         variant: 'CS'
         version: '7.5'
     - name: Test fixnums
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/fixnum.tests
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/fixnum.tests
     - name: Test booleans
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/boolean.tests
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/boolean.tests
     - name: Test characters
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/char.tests
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -54,14 +51,11 @@ jobs:
     - name: Build
       run: make
     - name: Test fixnums
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/fixnum.tests
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/fixnum.tests
     - name: Test booleans
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/boolean.tests
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/boolean.tests
     - name: Test characters
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/char.tests
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
 
 
   buildtest-vg:
@@ -84,12 +78,9 @@ jobs:
         variant: 'CS'
         version: '7.5'
     - name: Test fixnums
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "valgrind -q ./rattle -e --" ../tests/fixnum.tests
+      run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/fixnum.tests
     - name: Test booleans
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "valgrind -q ./rattle -e --" ../tests/boolean.tests
+      run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/boolean.tests
     - name: Test characters
-      working-directory: ./build
-      run: racket ../tests/script/test.rkt -c "valgrind -q ./rattle -e --" ../tests/char.tests
+      run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/char.tests
       
