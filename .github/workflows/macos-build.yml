@@ -1,0 +1,32 @@
+name: MacOS CI
+
+on: [push, pull_request]
+
+jobs:
+  buildtest-macos:
+
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Configure
+      working-directory: ./build
+      run: cmake -GNinja -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8 -DCMAKE_BUILD_TYPE=Coverage ..
+    - name: Build
+      working-directory: ./build
+      run: ninja
+    - uses: Bogdanp/setup-racket@v0.5
+      with:
+        architecture: 'x64'
+        distribution: 'full'
+        variant: 'CS'
+        version: '7.5'
+    - name: Test fixnums
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/fixnum.tests
+    - name: Test booleans
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/boolean.tests
+    - name: Test characters
+      working-directory: ./build
+      run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/char.tests
