@@ -4,7 +4,7 @@ all: rattle runtime.o
 EXTRA_CFLAGS =
 
 ifdef DEBUG
-CFLAGS := $(CFLAGS) -O0 -g
+CFLAGS := $(CFLAGS) -O0 -g -fsanitize=undefined
 else ifdef COVERAGE	
 CFLAGS := $(CFLAGS) -O0 -g
 EXTRA_CFLAGS := --coverage
