@@ -36,7 +36,9 @@ jobs:
       run: |
         wget -O codecov.sh https://codecov.io/bash
         chmod +x codecov.sh
-        ./codecov.sh -F integration -y .codecov.yml -Z
+        pwd
+        find . -type f
+        bash -x ./codecov.sh -F integration -y .codecov.yml -Z
           
   buildtest-musl:
 
