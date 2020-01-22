@@ -26,11 +26,12 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <dlfcn.h>
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
 
-static const char *CC = "/usr/bin/gcc";
+static const char *CC = "/usr/bin/cc";
 
 // Compiler main entry point file
 void __attribute__((noreturn))
@@ -445,7 +446,7 @@ compile_expression (const char *e)
     if (child == 0)
       {
         // inside child
-        execl (CC, CC, "-static", "-o", otemplate, itemplate, "runtime.o", (char *) NULL);
+        execl (CC, CC, "-shared", "-o", otemplate, itemplate, "runtime.o", (char *) NULL);
 
         // unreachable
         assert (false);
@@ -458,16 +459,30 @@ compile_expression (const char *e)
   // remove input file and close port
   unlink (itemplate);
   close (ifd);
+
+  // We have compiled the linked library so we are ready to
+  // dynamically load the library
   {
-    int child = fork ();
-    if (child == 0)
+    void *handle = NULL;
+    void (*fn) (void);
+    handle = dlopen ("otemplate", RTLD_LAZY);
+
+    if (!handle)
       {
-        execl (otemplate, otemplate, (char *) NULL);
-        // unreachable
-        assert (false);
+        fprintf (stderr, "fail to load library: %s\n", dlerror());
+        exit (EXIT_FAILURE);
       }
 
-    waitpid (child, NULL, 0);
+    fn = dlsym (handle, "runtime_startup");
+    if (!fn)
+      {
+        fprintf (stderr, "cannot load symbol `runtime_startup': %s\n", dlerror ());
+        dlclose (handle);
+        exit (EXIT_FAILURE);
+      }
+
+    fn ();
+    dlclose (handle);
   }
 
   // delete output file
