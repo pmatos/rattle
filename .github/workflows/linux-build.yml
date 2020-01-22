@@ -13,15 +13,11 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y cmake ninja-build gcc gcc-8 g++ g++-8 sudo curl
-    - name: Create build dir
-      run: mkdir build
-    - name: Configure
-      working-directory: ./build
-      run: cmake -GNinja -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8 -DCMAKE_BUILD_TYPE=Coverage ..
+        apt-get install -y make gcc gcc-8 g++ g++-8 sudo curl
     - name: Build
-      working-directory: ./build
-      run: ninja
+      env:
+        COVERAGE: 1
+      run: make 
     - uses: Bogdanp/setup-racket@v0.5
       with:
         architecture: 'x64'
@@ -54,15 +50,9 @@ jobs:
     - name: Install dependencies
       run: |
         apk update
-        apk add cmake ninja gcc g++ sudo curl
-    - name: Create build dir
-      run: mkdir build
-    - name: Configure
-      working-directory: ./build
-      run: cmake -GNinja -DCMAKE_BUILD_TYPE=Release ..
+        apk add make gcc g++ sudo curl
     - name: Build
-      working-directory: ./build
-      run: ninja
+      run: make
     - name: Test fixnums
       working-directory: ./build
       run: racket ../tests/script/test.rkt -c "./rattle -e --" ../tests/fixnum.tests
@@ -84,15 +74,9 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y cmake ninja-build gcc gcc-8 g++ g++-8 sudo curl valgrind
-    - name: Create build dir
-      run: mkdir build
-    - name: Configure
-      working-directory: ./build
-      run: cmake -GNinja -DCMAKE_C_COMPILER=gcc-8 -DCMAKE_CXX_COMPILER=g++-8 -DCMAKE_BUILD_TYPE=Debug ..
+        apt-get install -y make gcc gcc-8 g++ g++-8 sudo curl valgrind
     - name: Build
-      working-directory: ./build
-      run: ninja
+      run: make
     - uses: Bogdanp/setup-racket@v0.5
       with:
         architecture: 'x64'
