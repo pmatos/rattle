@@ -27,7 +27,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include "config.h"
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 1
 
 static const char *CC = "/usr/bin/gcc";
 
