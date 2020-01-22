@@ -4,7 +4,8 @@ all: rattle runtime.o
 ifdef DEBUG
 CFLAGS := $(CFLAGS) -O0 -g
 else ifdef COVERAGE	
-CFLAGS := $(CFLAGS) -O0 -g -coverage
+CFLAGS := $(CFLAGS) -O0 -g --coverage
+LDFLAGS := $(LDFLAGS) --coverage
 else
 CFLAGS := $(CFLAGS) -O3
 endif
