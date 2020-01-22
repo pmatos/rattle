@@ -1,3 +1,0 @@
-#define VERSION_MAJOR @rattle_VERSION_MAJOR@
-#define VERSION_MINOR @rattle_VERSION_MINOR@
-

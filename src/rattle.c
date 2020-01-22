@@ -27,7 +27,8 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include "config.h"
+#define VERSION_MAJOR 0
+#define VERSION_MINOR 1
 
 static const char *CC = "/usr/bin/gcc";
 
@@ -444,7 +445,7 @@ compile_expression (const char *e)
     if (child == 0)
       {
         // inside child
-        execl (CC, CC, "-static", "-o", otemplate, itemplate, "runtime/libruntime.a", (char *) NULL);
+        execl (CC, CC, "-static", "-o", otemplate, itemplate, "runtime.o", (char *) NULL);
 
         // unreachable
         assert (false);
