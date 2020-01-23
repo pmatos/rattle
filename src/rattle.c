@@ -390,9 +390,9 @@ compile_expression (const char *e)
   struct sch_imm *imm = parse_imm (&e);
 
   char itemplate[] = "/tmp/rattleXXXXXX.s";
-  char otemplate[] = "/tmp/rattleXXXXXX";
+  char otemplate[] = "/tmp/librattleXXXXXX.so";
   int ifd = mkstemps (itemplate, 2);
-  int ofd = mkstemp (otemplate);
+  int ofd = mkstemps (otemplate, 3);
 
   if (ifd == -1 || ofd == -1)
     {
@@ -446,7 +446,7 @@ compile_expression (const char *e)
     if (child == 0)
       {
         // inside child
-        execl (CC, CC, "-shared", "-o", otemplate, itemplate, "runtime.o", (char *) NULL);
+        execl (CC, CC, "-shared", "-fPIC", "-o", otemplate, itemplate, "runtime.o", (char *) NULL);
 
         // unreachable
         assert (false);
@@ -465,18 +465,18 @@ compile_expression (const char *e)
   {
     void *handle = NULL;
     void (*fn) (void);
-    handle = dlopen ("otemplate", RTLD_LAZY);
+    handle = dlopen (otemplate, RTLD_NOW | RTLD_GLOBAL);
 
     if (!handle)
       {
-        fprintf (stderr, "fail to load library: %s\n", dlerror());
+        fprintf (stderr, "%s\n", dlerror());
         exit (EXIT_FAILURE);
       }
 
     fn = dlsym (handle, "runtime_startup");
     if (!fn)
       {
-        fprintf (stderr, "cannot load symbol `runtime_startup': %s\n", dlerror ());
+        fprintf (stderr, "%s\n", dlerror ());
         dlclose (handle);
         exit (EXIT_FAILURE);
       }
