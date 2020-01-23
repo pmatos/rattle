@@ -89,7 +89,7 @@ print_ptr(ptr x)
   else if (x == null)
     printf ("()");
   else
-    printf ("#<unknown 0x%08lx>", x);
+    printf ("#<unknown 0x%08" PRIx64 ">", x);
   printf ("\n");
 }
 
