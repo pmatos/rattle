@@ -2,6 +2,7 @@
 all: rattle runtime.o
 
 EXTRA_CFLAGS =
+LDFLAGS = -ldl
 
 ifdef DEBUG
 CFLAGS := $(CFLAGS) -O0 -g -fsanitize=undefined
