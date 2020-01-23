@@ -19,7 +19,7 @@ rattle: src/rattle.c
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $(LDFLAGS) $^ -o $@
 
 runtime.o: src/runtime.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 .PHONY: tests
 tests:
