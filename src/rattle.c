@@ -125,7 +125,24 @@ main(int argc, char *argv[]) {
 #define FIXNUM_MIN -2305843009213693952LL
 #define FIXNUM_MAX  2305843009213693951LL
 
+// Immediates are just represented by a single 64bit value
 typedef uint64_t sch_imm;
+
+typedef enum { SCH_PRIM } sch_type;
+
+// Primitives
+struct sch_prim; // fwd declaration
+typedef void (*prim_emmiter) (FILE *, struct sch_prim *);
+
+typedef struct sch_prim
+{
+  sch_type type;         // SCH_PRIM for all sch_prim values
+  char *name;            // Primitive name
+  unsigned int argcount; // Number of arguments for the primitive
+  prim_emmiter fn;       // Primiive function emmiter
+} sch_prim;
+
+
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -365,7 +382,7 @@ evaluate(const char *cmd)
 void
 compile(const char *input, const char *output)
 {
-  (void)input;
+  (void) input;
   (void) output;
   assert(false);
 }
