@@ -93,9 +93,8 @@ print_ptr(ptr x)
   printf ("\n");
 }
 
-int
-main(void)
+void
+runtime_startup (void)
 {
   print_ptr (scheme_entry ());
-  return 0;
 }

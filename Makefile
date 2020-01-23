@@ -2,6 +2,7 @@
 all: rattle runtime.o
 
 EXTRA_CFLAGS =
+LDFLAGS = -ldl
 
 ifdef DEBUG
 CFLAGS := $(CFLAGS) -O0 -g -fsanitize=undefined
@@ -15,10 +16,10 @@ endif
 CFLAGS := $(CFLAGS) -Werror -Wall -Wextra
 
 rattle: src/rattle.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $(LDFLAGS) $^ -o $@
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $^ -o $@ $(LDFLAGS)
 
 runtime.o: src/runtime.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 .PHONY: tests
 tests:
