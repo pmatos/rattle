@@ -48,7 +48,7 @@ help (const char *prog) {
 
 // Prototypes
 void evaluate(const char *);
-void compile (const char *, const char*);
+void compile(const char *, const char *);
 void compile_expression (const char *);
 
 int
@@ -116,14 +116,23 @@ main(int argc, char *argv[]) {
   return 0;
 }
 
-// Parsing
-enum sch_type { SCH_NULL, SCH_FIXNUM, SCH_BOOL, SCH_CHAR };
+///////////////////////////////////////////////////////////////////////
+//
+// Section Scheme Values
+//
+//
+///////////////////////////////////////////////////////////////////////
+#define FIXNUM_MIN -2305843009213693952LL
+#define FIXNUM_MAX  2305843009213693951LL
 
-struct sch_imm
-{
-  enum sch_type type;
-  int64_t value;
-};
+typedef uint64_t sch_imm;
+
+///////////////////////////////////////////////////////////////////////
+//
+//  Section Parsing
+//
+//
+///////////////////////////////////////////////////////////////////////
 
 char *
 skip_space (char *input)
@@ -132,35 +141,28 @@ skip_space (char *input)
   return input;
 }
 
-struct sch_imm *
-parse_imm_bool (const char **input)
+bool
+parse_imm_bool (const char **input, sch_imm *imm)
 {
-  struct sch_imm *imm = NULL;
   if ((*input)[0] == '#')
     {
       if ((*input)[1] == 't' || (*input)[1] == 'f')
         {
-          imm = malloc (sizeof(*imm));
-          if (!imm)
-            {
-              fprintf (stderr, "out of memory\n");
-              exit (EXIT_FAILURE);
-            }
-          imm->type = SCH_BOOL;
-          imm->value = ((*input)[1] == 't');
+          // Booleans are represented as:
+          // false: 00101111 (0x2f)
+          // true:  01101111 (0x6f)
+          *imm = ((*input)[1] == 't') ? (sch_imm) 0x6f : (sch_imm) 0x2f;
           *input += 2;
+          return true;
         }
     }
-  return imm;
+
+  return false;
 }
 
-#define FIXNUM_MIN -2305843009213693952LL
-#define FIXNUM_MAX  2305843009213693951LL
-
-struct sch_imm *
-parse_imm_fixnum (const char **input)
+bool
+parse_imm_fixnum (const char **input, sch_imm *imm)
 {
-  struct sch_imm *imm = NULL;
   const char *sign  = NULL;
   bool seen_num = false;
   const char *ptr = *input;
@@ -170,7 +172,7 @@ parse_imm_fixnum (const char **input)
       sign = *input;
       ptr++;
     }
-  unsigned long long v = 0;
+  uint64_t v = 0;
   for (; isdigit(*ptr); ptr++)
     {
       seen_num = true;
@@ -179,146 +181,165 @@ parse_imm_fixnum (const char **input)
 
   if (seen_num && v <= FIXNUM_MAX)
     {
-      imm = malloc(sizeof(*imm));
-      if (!imm)
-        {
-          fprintf (stderr, "out of memory\n");
-          exit (EXIT_FAILURE);
-        }
-
-      imm->type = SCH_FIXNUM;
-      imm->value = v;
+      int64_t fx =  (int64_t) v;
       if (sign && *sign == '-')
-        imm->value = -imm->value;
+        fx = -v;
+
+      // Fixnums have two bottom bits as 0
+      *imm = (sch_imm) (fx << 2);
+      return true;
     }
 
-  return imm;
+  return false;
 }
 
-struct sch_imm *
-parse_imm_char (const char **input)
+bool
+parse_imm_char (const char **input, sch_imm *imm)
 {
-  struct sch_imm *imm = NULL;
+  unsigned char c = 0;
   const char *ptr = *input;
 
   if (ptr[0] == '#' && ptr[1] == '\\')
     {
-      imm = malloc(sizeof(*imm));
-      if (!imm)
-        {
-          fprintf (stderr, "out of memory\n");
-          exit (EXIT_FAILURE);
-        }
-
-      imm->type = SCH_CHAR;
       ptr += 2;
       if (!strncmp (ptr, "alarm", 5))
         {
-          imm->value = 0x7;
+          c = 0x7;
           *input += 5;
         }
       else if (!strncmp (ptr, "backspace", 9))
         {
-          imm->value = 0x8;
+          c = 0x8;
           *input += 9;
         }
       else if (!strncmp (ptr, "delete", 6))
         {
-          imm->value = 0x7f;
+          c = 0x7f;
           *input += 6;
         }
       else if (!strncmp (ptr, "escape", 6))
         {
-          imm->value = 0x1b;
+          c = 0x1b;
           *input += 6;
         }
       else if (!strncmp (ptr, "newline", 7))
         {
-          imm->value = 0xa;
+          c = 0xa;
           *input += 7;
         }
       else if (!strncmp (ptr, "null", 4))
         {
-          imm->value = 0x0;
+          c = 0x0;
           *input += 4;
         }
       else if (!strncmp (ptr, "return", 6))
         {
-          imm->value = 0xd;
+          c = 0xd;
           *input += 6;
         }
       else if (!strncmp (ptr, "space", 5))
         {
-          imm->value = (uint64_t)' ';
+          c = (uint64_t)' ';
           *input += 5;
         }
       else if (!strncmp (ptr, "tab", 3))
         {
-          imm->value = 0x9;
+          c = 0x9;
           *input += 3;
         }
       else if (isascii(ptr[2])) // Simple case: #\X where X is ascii
         {
-          imm->value = (*input)[2];
+          c = (*input)[2];
           *input += 3;
         }
       else
         {
-          free (imm);
           fprintf (stderr, "failed to parse `%s'", *input);
           exit (EXIT_FAILURE);
         }
+
+      // Chars have the lowest byte as 0x0f
+      *imm = (c << 8) | 0x0f;
+      return true;
     }
 
-  return imm;
+  return false;
 }
 
-struct sch_imm *
-parse_imm_null (const char **input)
+bool
+parse_imm_null (const char **input, sch_imm *imm)
 {
-  struct sch_imm *imm = NULL;
-
   if ((*input)[0] == 'n' &&
       (*input)[1] == 'u' &&
       (*input)[2] == 'l' &&
       (*input)[3] == 'l')
     {
-      imm = malloc (sizeof (*imm));
-      if (!imm)
-        {
-          fprintf (stderr, "out of memory\n");
-          exit (EXIT_FAILURE);
-        }
-
-      imm->type = SCH_NULL;
-      imm->value = 0;
       *input += 4;
+
+      // null is represented as 0x3f
+      *imm = 0x3f;
+      return true;
     }
 
-  return imm;
+  return false;
 }
 
-struct sch_imm *
-parse_imm (const char **input)
+bool
+parse_imm (const char **input, sch_imm *imm)
 {
-  struct sch_imm *imm = parse_imm_null (input);
-
-  // char needs to be the last one to be parsed
-  if (!imm)
-    {
-      imm = parse_imm_fixnum (input);
-    }
-  if (!imm)
-    {
-      imm = parse_imm_bool (input);
-    }
-  if (!imm)
-    {
-      imm = parse_imm_char (input);
-    }
-
-    return imm;
+  return
+  parse_imm_fixnum (input, imm) ||
+    parse_imm_bool (input, imm) ||
+    parse_imm_null (input, imm) ||
+    parse_imm_char (input, imm);
 }
+
+///////////////////////////////////////////////////////////////////////
+//
+// Section EMIT_ASM_
+//
+// The functions in this section are used to emit assembly to a FILE *
+//
+//
+///////////////////////////////////////////////////////////////////////
+
+
+// Emit assembly for function decorations - prologue and epilogue
+void
+emit_asm_prologue (FILE *f, const char *name)
+{
+  fprintf (f, "    .text\n");
+  fprintf (f, "    .globl %s\n", name);
+  fprintf (f, "    .type %s, @function\n", name);
+  fprintf (f, "%s:\n", name);
+}
+
+void
+emit_asm_epilogue (FILE *f)
+{
+  fprintf (f, "    ret\n");
+}
+
+// EMIT_ASM_IMM
+// Emit assembly for immediates
+void
+emit_asm_imm (FILE *f, sch_imm imm)
+{
+  if (imm > 4294967295)
+    fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", imm);
+  else
+    fprintf (f, "    movl $%" PRIu64 ", %%eax\n", imm);
+}
+
+///////////////////////////////////////////////////////////////////////
+//
+// Section Compilation and Evalution
+//
+// Top-level compilation and evaluation functions.
+//
+//
+///////////////////////////////////////////////////////////////////////
+
 
 // Evaluation
 void
@@ -327,67 +348,24 @@ evaluate(const char *cmd)
   compile_expression(cmd);
 }
 
-// Compilation
-void emit_immediate(uint64_t imm, FILE *f)
-{
-  fprintf (f, "    .text\n");
-  fprintf (f, "    .globl scheme_entry\n");
-  fprintf (f, "    .type scheme_entry, @function\n");
-  fprintf (f, "scheme_entry:\n");
-
-  if (imm > 4294967295)
-    fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", imm);
-  else
-    fprintf (f, "    movl $%" PRIu64 ", %%eax\n", imm);
-
-  fprintf (f, "    ret\n");
-}
-
 void
-compile (const char *i __attribute__((unused)),
-         const char *o __attribute__((unused)))
+compile(const char *input, const char *output)
 {
-  // todo
+  (void)input;
+  (void) output;
+  assert(false);
 }
-
-
-void
-compile_fixnum (uint64_t n, FILE *f)
-{
-  // Fixnums have two bottom bits as 0
-  emit_immediate (n << 2, f);
-}
-
-void
-compile_char (char c, FILE *f)
-{
-  // Chars have the lowest byte as 0x0f
-  emit_immediate ((c << 8) | 0x0f, f);
-}
-
-void
-compile_bool (bool b, FILE* f)
-{
-  // Booleans are represented as:
-  // false: 00101111 (0x2f)
-  // true:  01101111 (0x6f)
-  if (b)
-    emit_immediate (0x6f, f);
-  else
-    emit_immediate (0x2f, f);
-}
-
-void
-compile_null(FILE* f)
-{
-  // null is represented as 0x3f
-  emit_immediate (0x3f, f);
-}
-
 void
 compile_expression (const char *e)
 {
-  struct sch_imm *imm = parse_imm (&e);
+  sch_imm imm = 0;
+  bool parsed = parse_imm (&e, &imm);
+
+  if (!parsed)
+    {
+      fprintf (stderr, "error: cannot parse `%s'\n", e);
+      exit (EXIT_FAILURE);
+    }
 
   char itemplate[] = "/tmp/rattleXXXXXX.s";
   char otemplate[] = "/tmp/librattleXXXXXX.so";
@@ -402,40 +380,13 @@ compile_expression (const char *e)
 
   FILE *i = fdopen (ifd, "w");
 
-  if (imm)
-    {
-      switch (imm->type)
-        {
-        case SCH_NULL:
-          compile_null (i);
-          break;
-        case SCH_BOOL:
-          compile_bool (imm->value, i);
-          break;
-        case SCH_CHAR:
-          compile_char (imm->value, i);
-          break;
-        case SCH_FIXNUM:
-          compile_fixnum (imm->value, i);
-          break;
-        default:
-          // unreachable
-          assert (false);
-        }
-      // close file
-      fclose (i);
-      // free immediate value
-      free (imm);
-    }
-  else
-    {
-      unlink (otemplate);
-      unlink (itemplate);
-      close (ofd);
-      close (ifd);
-      fprintf (stderr, "error: cannot parse `%s'\n", e);
-      exit (EXIT_FAILURE);
-    }
+  // write asm file
+  emit_asm_prologue (i, "scheme_entry");
+  emit_asm_imm (i, imm);
+  emit_asm_epilogue (i);
+
+  // close file
+  fclose (i);
 
   // close ofd so gcc can write to it
   close (ofd);
@@ -488,3 +439,4 @@ compile_expression (const char *e)
   // delete output file
   unlink (otemplate);
 }
+
