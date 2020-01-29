@@ -122,27 +122,6 @@ main(int argc, char *argv[]) {
 //
 //
 ///////////////////////////////////////////////////////////////////////
-#define FIXNUM_MIN -2305843009213693952LL
-#define FIXNUM_MAX  2305843009213693951LL
-
-// malloc returns pointers that are always alignof(max_align_t) aligned.
-// Which means we can distinguish integers that are pointers from
-// integers that are not and can represent immediates.
-// In a 64 bit system, malloc returns pointers that are 16bits aligned (last 4 bits are zero).
-// In a 32 bit system, malloc returns pointers that are 8bits aligned (last 3 bits are zero).
-//
-// If we assume 8bits the smallest alignment on any system nowadays,
-// then we know all pointers will have the lowest 8 bits at zero.
-// We just need a non-zero tag for all immediates that live on those
-// bits.
-//
-// For example:
-// Fixnum:        0x01
-// Boolean True:  0x2f - 0b 0010 1111
-// Boolean False: 0x6f - 0b 0110 1111
-// Null:          0x3f - 0b 0011 1111
-// Character:     0x0f - 0b 0000 1111
-// Non-Immediate: 0x00 - 0b 0000 0000
 
 // Immediates are just represented by a single 64bit value
 typedef uint64_t sch_imm;

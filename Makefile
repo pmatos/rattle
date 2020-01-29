@@ -15,10 +15,10 @@ endif
 
 CFLAGS := $(CFLAGS) -Werror -Wall -Wextra
 
-rattle: src/rattle.c
+rattle: src/rattle.c src/common.h
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $^ -o $@ $(LDFLAGS)
 
-runtime.o: src/runtime.c
+runtime.o: src/runtime.c src/common.h
 	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 .PHONY: tests
