@@ -1,7 +1,12 @@
 #lang rosette/safe
 
-(current-bitwidth #f)
+;(require rosette/solver/smt/boolector)
+
 (define bw 32) (define ptrmask #x7)
+
+(current-bitwidth bw)
+;(current-solver (boolector))
+
 ;(define bw 64) (define ptrmask #xf)
 
 (define native_t (bitvector bw))
@@ -74,11 +79,16 @@
   (bveq (bvashr b bool-shift) (bv 1 bw)))
 
 (define (char-decode c)
-  (bvashr c char-shift))
+  (bitvector->integer (bvashr c char-shift)))
 
 (define (fx-decode fx)
-  (bvashr fx fx-shift))
+  (bitvector->integer (bvashr fx fx-shift)))
 
+(define fx-width (bvsub (bv bw bw) fx-shift))
+(define fx-min (bvneg (bvshl (bv 1 bw) (bvsub fx-width (bv 1 bw)))))
+(define fx-max (bvsub (bvshl (bv 1 bw) (bvsub fx-width (bv 1 bw))) (bv 1 bw)))
+
+(define sol
 (synthesize
  #:forall (list bool-value fx-value char-value ptr)
  #:guarantee
@@ -93,9 +103,9 @@
    (assert (valid? null-constant) (null? null-constant))
    
    ;; fx constraints
-   (assert (=> (>= (- (expt 2 (- bw 1)))
+   (assert (=> (<= (bitvector->integer fx-min)
                    fx-value
-                   (- (expt 2 (- bw 1)) 1))
+		   (bitvector->integer fx-max))
                (and (valid? (fx-encode fx-value))
                     (fx? (fx-encode fx-value))
                     (= fx-value (fx-decode (fx-encode fx-value))))))
@@ -104,7 +114,24 @@
    (assert (=> (ptr? ptr) (valid? ptr)))
 
    ;; char constraints
-   (assert (=> (>= 0 char-value 255)
+   (assert (=> (<= 0 char-value 255)
                (and (valid? (char-encode char-value))
                     (char? (char-encode char-value))
-                    (= char-value (char-decode (char-encode char-value))))))))
+                    (= char-value (char-decode (char-encode char-value)))))))))
+sol
+
+(evaluate fx-width sol)
+(evaluate fx-min sol)
+(evaluate fx-max sol)
+
+(evaluate (fx-encode 0) sol)
+(evaluate (fx-encode 1) sol)
+(evaluate (fx-encode 2) sol)
+(evaluate (fx-encode (- (expt 2 (- bw 1)) 1)) sol)
+
+(evaluate (char-encode 0) sol)
+(evaluate (char-encode 1) sol)
+(evaluate (char-encode 2) sol)
+(evaluate (char-encode 255) sol)
+
+
