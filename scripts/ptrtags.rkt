@@ -6,10 +6,14 @@
 
 (define native_t (bitvector bw))
 
+(define-symbolic ptr native_t)
+
 (define-symbolic null-value1 native_t)
 (define-symbolic null-value2 native_t)
 
-(define-symbolic fx-value native_t)
+(define-symbolic bool-value boolean?)
+
+(define-symbolic fx-value integer?)
 
 (define (ptr? v)
   (bveq (bvand v (bv ptrmask bw))
@@ -44,27 +48,37 @@
   (bveq (bvand v bool-mask) bool-tag))
 
 (define (valid? v)
-  (xor (ptr? v)
-       (char? v)
-       (fx? v)
-       (bool? v)
-       (null? v)))
+  (= 1
+     (+ (if (ptr? v) 1 0)
+        (if (char? v) 1 0)
+        (if (fx? v) 1 0)
+        (if (bool? v) 1 0)
+        (if (null? v) 1 0))))
 
 ;; Encoding procedures
 (define (fx-encode i)
-  (bvor fx-tag (bvshl i fx-shift)))
+  (bvor fx-tag (bvshl (integer->bitvector i native_t) fx-shift)))
 
 (define (char-encode c)
-  (bvor char-tag (bvshl c char-shift)))
+  (bvor char-tag (bvshl (integer->bitvector c native_t) char-shift)))
 
 (define (null-encode n)
   (bvor null-tag (bvshl n null-shift)))
 
 (define (bool-encode b)
-  (bvor bool-tag (bvshl b bool-shift)))
+  (if b
+      (bvor bool-tag (bvshl (bv 1 bw) bool-shift))
+      (bvor bool-tag (bvshl (bv 0 bw) bool-shift))))
 
-(assert (or (bool? (bool-encode (bv 1 bw))) (bool? (bool-encode (bv 0 bw))))) 
-         
-(synthesize #:forall (list value null-value1 null-value2 fx-value)
-            #:guarantee (begin
-                          (assert (bveq (null-encode null-value1) (null-encode null-value2)))))
+(synthesize
+ #:forall (list bool-value fx-value char-value ptr)
+ #:guarantee
+ (begin
+   (assert (and (valid? (bool-encode bool-value)) (bool? (bool-encode bool-value))))
+   (assert (=> (>= (- (expt 2 (- bw 1)))
+                   fx-value
+                   (- (expt 2 (- bw 1)) 1))
+               (and (valid? (fx-encode fx-value)) (fx? (fx-encode fx-value)))))
+   (assert (=> (ptr? ptr) (valid? ptr)))
+   (assert (=> (>= 0 char-value 255)
+               (and (valid? (char-encode char-value)) (char? (char-encode char-value)))))))
