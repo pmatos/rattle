@@ -4,6 +4,11 @@ Rattle is an experiment to scratch an itch.
 
 [![Total alerts](https://img.shields.io/lgtm/alerts/g/pmatos/rattle.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/pmatos/rattle/alerts/) [![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/pmatos/rattle.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/pmatos/rattle/context:cpp)
 
+<a href="https://scan.coverity.com/projects/pmatos-rattle">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/20281/badge.svg"/>
+</a>
+
 Disregard - using it might destroy your PC. Don't do it.
 If you use it and does destroy your PC, you only have yourself to blame.
 
