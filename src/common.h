@@ -13,7 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+#pragma once
 
+#include <stdio.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <assert.h>
+
+//
+// Platform
+//
+inline bool
+arch_32_p (void)
+{
+  return sizeof (size_t) == 4;
+}
+
+inline bool
+arch_64_p (void)
+{
+  return sizeof (size_t) == 8;
+}
 
 // This header contains common declaration to be used by both the
 // compiler and the runtime.
@@ -37,9 +57,73 @@
 //                     - 0b xxxx x000 for 32bit
 //
 // Fixnum:        0x01 - 0b 0000 0001
-// Null:          0x3f - 0b 0011 1110
-// Boolean True:  0x2f - 0b 0010 1110
-// Boolean False: 0x6f - 0b 0110 1110
-// Character:     0x0f - 0b 0000 1110
-// TODO ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Null:          0x3e - 0b 0011 1110
+// Boolean True:  0x2e - 0b 0110 1110
+// Boolean False: 0x6e - 0b 0010 1110
+// Character:     0x0e - 0b 0000 1110
 
+typedef uint64_t schptr_t;
+
+//
+// Predicates
+//
+
+inline bool
+sch_imm_p (schptr_t sptr)
+{
+  return (sptr & 0x07) ? true : false;
+}
+
+inline bool
+sch_imm_fixnum_p (schptr_t sptr)
+{
+  return (sptr & 0x01) ? true : false;
+}
+
+inline bool
+sch_imm_null_p (schptr_t sptr)
+{
+  return (sptr & 0xff) == 0x3e;
+}
+
+inline bool
+sch_imm_boolean_p (schptr_t sptr)
+{
+  return (sptr & 0x3f) == 0x2e;
+}
+
+inline bool
+sch_imm_true_p (schptr_t sptr)
+{
+  return sch_imm_boolean_p (sptr) && (sptr >> 6);
+}
+
+inline bool
+sch_imm_false_p (schptr_t sptr)
+{
+  return !sch_imm_true_p (sptr);
+}
+
+// Encoding
+
+inline schptr_t
+sch_encode_ptr (void *ptr)
+{
+  assert (arch_32_p () ?
+          ((uintptr_t)ptr & 0x7) == 0 :
+          ((uintptr_t)ptr & 0xf) == 0);
+  return (schptr_t) ptr;
+}
+
+inline schptr_t
+sch_encode_fixnum (int64_t fx)
+{
+  assert (fx < FIXNUM_MAX);
+  assert (fx > FIXNUM_MIN);
+  return (fx << 1) | 0x1;
+}
+
+inline schptr_t
+sch_encode_boolean (int64_t fx)
+{
+  
