@@ -5,7 +5,10 @@
   * Setup running under valgrind
   * Setup fuzzer
   * Test with Alpine as well to ensure we are musl compatible
+  * Setup coverity
 * Setup testsuite
+  * Use Avocado for integration testing
+  * Use Check for unit testing
 * Setup clang-format config
 * Setup Fossa.com for licensing checks
 * Setup esbmc for property analysis
