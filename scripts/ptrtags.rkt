@@ -1,11 +1,12 @@
 #lang rosette/safe
 
-;(require rosette/solver/smt/boolector)
-
 (define bw 32) (define ptrmask #x7)
+(define tag-bw 4)
 
 (current-bitwidth bw)
-;(current-solver (boolector))
+
+(define (tag-extend t)
+  (zero-extend t (bitvector bw)))
 
 ;(define bw 64) (define ptrmask #xf)
 
@@ -15,41 +16,43 @@
 
 (define-symbolic null-constant native_t)
 
-(define-symbolic bool-value boolean?)
 (define-symbolic true-constant native_t)
 (define-symbolic false-constant native_t)
 
 (define-symbolic fx-value integer?)
-
+(define-symbolic bool-value boolean?)
 (define-symbolic char-value integer?)
 
 (define (ptr? v)
   (bveq (bvand v (bv ptrmask bw))
         (bv 0 (bitvector bw))))
 
-(define-symbolic fx-tag native_t)
+(define-symbolic fx-tag (bitvector tag-bw))
 (define-symbolic fx-shift native_t)
-(define-symbolic fx-mask native_t)
+(define-symbolic fx-mask (bitvector tag-bw))
 
 (define (fx? v)
-  (bveq (bvand v fx-mask) fx-tag))
+  (bveq (bvand v (tag-extend fx-mask))
+        (tag-extend fx-tag)))
 
 (define (null? v)
   (bveq null-constant v))
 
-(define-symbolic char-tag native_t)
+(define-symbolic char-tag (bitvector tag-bw))
 (define-symbolic char-shift native_t)
-(define-symbolic char-mask native_t)
+(define-symbolic char-mask (bitvector tag-bw))
 
 (define (char? v)
-  (bveq (bvand v char-mask) char-tag))
+  (bveq (bvand v (tag-extend char-mask))
+        (tag-extend char-tag)))
 
-(define-symbolic bool-tag native_t)
+(define-symbolic bool-tag (bitvector tag-bw))
 (define-symbolic bool-shift native_t)
-(define-symbolic bool-mask native_t)
+(define-symbolic bool-mask (bitvector tag-bw))
 
 (define (bool? v)
-  (bveq (bvand v bool-mask) bool-tag))
+  (bveq (bvand v (tag-extend bool-mask))
+        (tag-extend bool-tag)))
 
 (define (valid? v)
   (= 1
@@ -61,15 +64,17 @@
 
 ;; Encoding procedures
 (define (fx-encode i)
-  (bvor fx-tag (bvshl (integer->bitvector i native_t) fx-shift)))
+  (bvor (tag-extend fx-tag)
+        (bvshl (integer->bitvector i native_t) fx-shift)))
 
 (define (char-encode c)
-  (bvor char-tag (bvshl (integer->bitvector c native_t) char-shift)))
+  (bvor (tag-extend char-tag)
+        (bvshl (integer->bitvector c native_t) char-shift)))
 
 (define (bool-encode b)
   (if b
-      (bvor bool-tag (bvshl (bv 1 bw) bool-shift))
-      (bvor bool-tag (bvshl (bv 0 bw) bool-shift))))
+      (bvor (tag-extend bool-tag) (bvshl (bv 1 bw) bool-shift))
+      (bvor (tag-extend bool-tag) (bvshl (bv 0 bw) bool-shift))))
 
 (assert (bveq true-constant (bool-encode #t)))
 (assert (bveq false-constant (bool-encode #f)))
@@ -84,54 +89,67 @@
 (define (fx-decode fx)
   (bitvector->integer (bvashr fx fx-shift)))
 
-(define fx-width (bvsub (bv bw bw) fx-shift))
-(define fx-min (bvneg (bvshl (bv 1 bw) (bvsub fx-width (bv 1 bw)))))
-(define fx-max (bvsub (bvshl (bv 1 bw) (bvsub fx-width (bv 1 bw))) (bv 1 bw)))
+(assert (bveq fx-shift (bv 1 bw)))
+
+(define fx-width (- bw (bitvector->natural fx-shift)))
+;(define fx-min (- (arithmetic-shift 1 (- fx-width 1))))
+(define fx-min -1073741824)
+;(define fx-max (- (arithmetic-shift 1 (- fx-width 1)) 1))
+(define fx-max 1073741823)
 
 (define sol
-(synthesize
- #:forall (list bool-value fx-value char-value ptr)
- #:guarantee
- (begin
-   
-   ;; bool constraints
-   (assert (and (valid? (bool-encode bool-value))
-                (bool? (bool-encode bool-value))
-                (<=> bool-value (bool-decode (bool-encode bool-value)))))
+  (synthesize
+   #:forall (list bool-value fx-value char-value ptr)
+   #:guarantee
+   (begin
 
-   ;; null constraints
-   (assert (valid? null-constant) (null? null-constant))
-   
-   ;; fx constraints
-   (assert (=> (<= (bitvector->integer fx-min)
-                   fx-value
-		   (bitvector->integer fx-max))
-               (and (valid? (fx-encode fx-value))
-                    (fx? (fx-encode fx-value))
-                    (= fx-value (fx-decode (fx-encode fx-value))))))
+     ;; bool constraints
+     (assert (and (valid? (bool-encode bool-value))
+                  (bool? (bool-encode bool-value))
+                  (<=> bool-value (bool-decode (bool-encode bool-value)))))
 
-   ;; ptr constraints (non-imm)
-   (assert (=> (ptr? ptr) (valid? ptr)))
+     ;; null constraints
+     (assert (valid? null-constant) (null? null-constant))
 
-   ;; char constraints
-   (assert (=> (<= 0 char-value 255)
-               (and (valid? (char-encode char-value))
-                    (char? (char-encode char-value))
-                    (= char-value (char-decode (char-encode char-value)))))))))
-sol
+     ;; fx constraints
+     (assert (=> (<= fx-min fx-value fx-max)
+                 (and (valid? (fx-encode fx-value))
+                      (fx? (fx-encode fx-value))
+                      (= fx-value (fx-decode (fx-encode fx-value))))))
 
-(evaluate fx-width sol)
-(evaluate fx-min sol)
-(evaluate fx-max sol)
+     ;; ptr constraints (non-imm)
+     (assert (=> (ptr? ptr) (valid? ptr)))
 
-(evaluate (fx-encode 0) sol)
-(evaluate (fx-encode 1) sol)
-(evaluate (fx-encode 2) sol)
-(evaluate (fx-encode (- (expt 2 (- bw 1)) 1)) sol)
+     ;; char constraints
+     (assert (=> (<= 0 char-value 255)
+                 (and (valid? (char-encode char-value))
+                      (char? (char-encode char-value))
+                      (= char-value (char-decode (char-encode char-value)))))))))
 
-(evaluate (char-encode 0) sol)
-(evaluate (char-encode 1) sol)
-(evaluate (char-encode 2) sol)
-(evaluate (char-encode 255) sol)
-
-
+(printf "/////////////////////////////////////////////////////~n")
+(printf "// Generated by ptrtags.rkt~n")
+(printf "// bitwidth: ~a, tag bitwidth: ~a, pointer mask: 0x~x~n"
+        bw tag-bw ptrmask)
+(printf "#define PTR_TAG 0~n")
+(printf "#define PTR_MASK 0x~x~n" ptrmask)
+(printf "#define PTR_SHIFT 0~n")
+(printf "//~n")
+(printf "#define FX_TAG 0x~x~n" (bitvector->natural (evaluate fx-tag sol)))
+(printf "#define FX_MASK 0x~x~n" (bitvector->natural (evaluate fx-mask sol)))
+(printf "#define FX_SHIFT ~a~n" (bitvector->natural (evaluate fx-shift sol)))
+(printf "#define FX_MAX ~a~n" (evaluate fx-max sol))
+(printf "#define FX_MIN ~a~n" (evaluate fx-min sol))
+(printf "//~n")
+(printf "#define CHAR_TAG 0x~x~n" (bitvector->natural (evaluate char-tag sol)))
+(printf "#define CHAR_MASK 0x~x~n" (bitvector->natural (evaluate char-mask sol)))
+(printf "#define CHAR_SHIFT ~a~n" (bitvector->natural (evaluate char-shift sol)))
+(printf "//~n")
+(printf "#define BOOL_TAG 0x~x~n" (bitvector->natural (evaluate bool-tag sol)))
+(printf "#define BOOL_MASK 0x~x~n" (bitvector->natural (evaluate bool-mask sol)))
+(printf "#define BOOL_SHIFT ~a~n" (bitvector->natural (evaluate bool-shift sol)))
+(printf "//~n")
+(printf "#define NULL_CST 0x~x~n" (bitvector->natural (evaluate null-constant sol)))
+(printf "#define TRUE_CST 0x~x~n" (bitvector->natural (evaluate true-constant sol)))
+(printf "#define FALSE_CST 0x~x~n" (bitvector->natural (evaluate false-constant sol)))
+(printf "//~n")
+(printf "/////////////////////////////////////////////////////~n")
