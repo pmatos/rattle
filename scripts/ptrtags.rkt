@@ -92,10 +92,15 @@
 (assert (bveq fx-shift (bv 1 bw)))
 
 (define fx-width (- bw (bitvector->natural fx-shift)))
-;(define fx-min (- (arithmetic-shift 1 (- fx-width 1))))
-(define fx-min -1073741824)
-;(define fx-max (- (arithmetic-shift 1 (- fx-width 1)) 1))
-(define fx-max 1073741823)
+(define fx-min (bitvector->integer
+                (bvneg (bvshl (bv 1 bw)
+                              (bvsub (integer->bitvector fx-width native_t)
+                                     (bv 1 bw))))))
+(define fx-max (bitvector->integer
+                (bvsub (bvshl (bv 1 bw)
+                              (bvsub (integer->bitvector fx-width native_t)
+                                     (bv 1 bw)))
+                       (bv 1 bw))))
 
 (define sol
   (synthesize
