@@ -314,6 +314,54 @@ parse_imm (const char **input, sch_imm *imm)
     parse_imm_char (input, imm);
 }
 
+bool
+parse_expr (const char **input, schptr_t *sptr)
+{
+  if (!parse_lparen (input))
+    return false;
+
+  // Setup list to keep values parsed inside expression
+  
+  
+  while (!parse_rparen (input))
+    {
+      skip_whitespace (input);
+
+      schptr_t sptr = 0;
+
+      if (parse_imm (input, &sptr))
+        {
+
+        }
+      else if (parse_prim (input, &sptr))
+        {
+
+        }
+      else if (parse_expr (input, &sptr))
+        {
+
+        }
+      else
+        {
+          fprintf (stderr, "error: cannot parse %s\n", *input);
+          exit (EXIT_FAILURE);
+        }
+
+    }
+
+  return true;
+}
+
+bool
+parse_prim (const char **input, schptr_t *sptr)
+{
+  if (parse_lparen (input) &&
+      skip_whitespace (input) &&
+      parse_prim_name (input))
+    
+      
+}
+
 ///////////////////////////////////////////////////////////////////////
 //
 // Section EMIT_ASM_
@@ -366,7 +414,10 @@ emit_asm_imm (FILE *f, sch_imm imm)
 }
 
 void
-emit_asm_expr (sch_
+emit_asm_expr (schptr_t sptr)
+{
+  (void)sptr;
+}
 
 // Primitives Emitter
 void
