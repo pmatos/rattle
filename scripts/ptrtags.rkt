@@ -1,6 +1,6 @@
 #lang rosette/safe
 
-(define bw 32) (define ptrmask #x7)
+(define bw 64) (define ptrmask #x7)
 (define tag-bw 4)
 
 (current-bitwidth bw)

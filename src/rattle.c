@@ -131,16 +131,16 @@ typedef uint64_t sch_imm;
 typedef enum { SCH_PRIM, SCH_EXPR_LIST } sch_type;
 
 // Primitives
-struct sch_prim; // fwd declaration
-typedef void (*prim_emmiter) (FILE *, struct sch_prim *);
+struct schprim; // fwd declaration
+typedef void (*prim_emmiter) (FILE *, struct schprim *);
 
-typedef struct sch_prim
+struct schprim
 {
-  sch_type type;         // SCH_PRIM for all sch_prim values
   char *name;            // Primitive name
   unsigned int argcount; // Number of arguments for the primitive
-  prim_emmiter fn;       // Primiive function emmiter
-} sch_prim;
+  prim_emmiter fn;       // Primitive function emmiter
+};
+typedef struct schprim schprim_t;
 
 typedef struct sch_expr_list
 {
@@ -148,11 +148,18 @@ typedef struct sch_expr_list
   struct sch_expr_list *next; // next value in list node
 } sch_expr_list_t;
 
-// Primitive emitter prototypes
-void emit_asm_prim_fxadd1 (FILE *, sch_prim *);
+struct schprim_val
+{
+  schprim_t *header;
+  schptr_t *args;
+};
+typedef struct schprim_val schprim_val_t;
 
-sch_prim primitives[] =
-  { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 } };
+// Primitive emitter prototypes
+void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
+
+schprim_t primitives[] =
+  { { "fxadd1", 1, emit_asm_prim_fxadd1 } };
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -169,7 +176,7 @@ skip_space (char *input)
 }
 
 bool
-parse_imm_bool (const char **input, sch_imm *imm)
+parse_imm_bool (const char **input, schptr_t *imm)
 {
   if ((*input)[0] == '#')
     {
@@ -178,7 +185,7 @@ parse_imm_bool (const char **input, sch_imm *imm)
           // Booleans are represented as:
           // false: 00101111 (0x2f)
           // true:  01101111 (0x6f)
-          *imm = ((*input)[1] == 't') ? (sch_imm) 0x6f : (sch_imm) 0x2f;
+          *imm = ((*input)[1] == 't') ? (schptr_t) 0x6f : (schptr_t) 0x2f;
           *input += 2;
           return true;
         }
@@ -188,7 +195,7 @@ parse_imm_bool (const char **input, sch_imm *imm)
 }
 
 bool
-parse_imm_fixnum (const char **input, sch_imm *imm)
+parse_imm_fixnum (const char **input, schptr_t *imm)
 {
   const char *sign  = NULL;
   bool seen_num = false;
@@ -213,7 +220,7 @@ parse_imm_fixnum (const char **input, sch_imm *imm)
         fx = -v;
 
       // Fixnums have two bottom bits as 0
-      *imm = (sch_imm) (fx << 2);
+      *imm = (schptr_t) (fx << 2);
       return true;
     }
 
@@ -221,7 +228,7 @@ parse_imm_fixnum (const char **input, sch_imm *imm)
 }
 
 bool
-parse_imm_char (const char **input, sch_imm *imm)
+parse_imm_char (const char **input, schptr_t *imm)
 {
   unsigned char c = 0;
   const char *ptr = *input;
@@ -294,7 +301,7 @@ parse_imm_char (const char **input, sch_imm *imm)
 }
 
 bool
-parse_imm_null (const char **input, sch_imm *imm)
+parse_imm_null (const char **input, schptr_t *imm)
 {
   if ((*input)[0] == 'n' &&
       (*input)[1] == 'u' &&
@@ -312,7 +319,7 @@ parse_imm_null (const char **input, sch_imm *imm)
 }
 
 bool
-parse_imm (const char **input, sch_imm *imm)
+parse_imm (const char **input, schptr_t *imm)
 {
   return
   parse_imm_fixnum (input, imm) ||
@@ -411,7 +418,7 @@ emit_asm_epilogue (FILE *f)
 // EMIT_ASM_IMM
 // Emit assembly for immediates
 void
-emit_asm_imm (FILE *f, sch_imm imm)
+emit_asm_imm (FILE *f, schptr_t imm)
 {
   if (imm > 4294967295)
     fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", imm);
@@ -420,16 +427,27 @@ emit_asm_imm (FILE *f, sch_imm imm)
 }
 
 void
-emit_asm_expr (schptr_t sptr)
+emit_asm_generic (FILE *f, schptr_t sptr)
 {
-  (void)sptr;
+  assert (sch_ptr_p (sptr));
+
+  emit_asm_prim_fxadd1 (f, (sch_prim *) sptr);
+}
+
+void
+emit_asm_expr (FILE *f, schptr_t sptr)
+{
+  if (sch_imm_p (sptr))
+    emit_asm_imm (f, sptr);
+  else
+    emit_asm_generic (f, sptr);
 }
 
 // Primitives Emitter
 void
 emit_asm_prim_fxadd1 (FILE *f, sch_prim *p)
 {
-  emit_asm_expr (p);
+  emit_asm_expr (f, p);
   fprintf (f, "    addl $4, %%eax");
 }
 
@@ -484,7 +502,7 @@ find_system_tmpdir ()
 void
 compile_expression (const char *e)
 {
-  sch_imm imm = 0;
+  schptr_t imm = 0;
   bool parsed = parse_imm (&e, &imm);
 
   if (!parsed)

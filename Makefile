@@ -1,6 +1,7 @@
 # Rattle Makefile
 all: rattle runtime.o
 
+# Flags
 EXTRA_CFLAGS =
 LDFLAGS = -ldl
 
@@ -15,10 +16,23 @@ endif
 
 CFLAGS := $(CFLAGS) -Werror -Wall -Wextra
 
-rattle: src/rattle.c src/common.h
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $^ -o $@ $(LDFLAGS)
+# Sources and Dependencies
+SRCS = src/rattle.c
+depend: .depend
 
-runtime.o: src/runtime.c src/common.h
+.depend: $(SRCS)
+	rm -f ./.depend
+	$(CC) $(CFLAGS) -MM $^ -MF ./.depend
+
+include .depend
+
+# Rules
+rattle.o: $(SRCS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $(SRCS) -o $@ $(LDFLAGS)
+rattle: rattle.o
+	$(CC) $^ -o $@ $(LDFLAGS)
+
+runtime.o: src/runtime.c
 	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 .PHONY: tests
