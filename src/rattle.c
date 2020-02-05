@@ -28,6 +28,8 @@
 #include <sys/wait.h>
 #include <dlfcn.h>
 
+#include "common.h"
+
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
 
@@ -126,7 +128,7 @@ main(int argc, char *argv[]) {
 // Immediates are just represented by a single 64bit value
 typedef uint64_t sch_imm;
 
-typedef enum { SCH_PRIM } sch_type;
+typedef enum { SCH_PRIM, SCH_EXPR_LIST } sch_type;
 
 // Primitives
 struct sch_prim; // fwd declaration
@@ -140,6 +142,11 @@ typedef struct sch_prim
   prim_emmiter fn;       // Primiive function emmiter
 } sch_prim;
 
+typedef struct sch_expr_list
+{
+  schptr_t ptr;          // value in list node
+  struct sch_expr_list *next; // next value in list node
+} sch_expr_list_t;
 
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, sch_prim *);
@@ -321,8 +328,7 @@ parse_expr (const char **input, schptr_t *sptr)
     return false;
 
   // Setup list to keep values parsed inside expression
-  
-  
+
   while (!parse_rparen (input))
     {
       skip_whitespace (input);
