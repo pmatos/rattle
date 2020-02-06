@@ -128,38 +128,64 @@ main(int argc, char *argv[]) {
 // Immediates are just represented by a single 64bit value
 typedef uint64_t sch_imm;
 
-typedef enum { SCH_PRIM, SCH_EXPR_LIST } sch_type;
-
 // Primitives
-struct schprim; // fwd declaration
+struct schprim;
 typedef void (*prim_emmiter) (FILE *, struct schprim *);
 
-struct schprim
+typedef enum { SCH_PRIM, SCH_PTR_LIST } sch_type;
+
+typedef struct schprim
 {
+  sch_type type;         // Type (always SCH_PRIM)
   char *name;            // Primitive name
   unsigned int argcount; // Number of arguments for the primitive
-  prim_emmiter fn;       // Primitive function emmiter
-};
-typedef struct schprim schprim_t;
+  prim_emmiter emitter;  // Primitive function emmiter
+} schprim_t;
 
-typedef struct sch_expr_list
+typedef struct schptr_list_node
 {
-  schptr_t ptr;          // value in list node
-  struct sch_expr_list *next; // next value in list node
-} sch_expr_list_t;
+  schptr_t ptr;                  // value in list node
+  struct schptr_list_node *next; // next value in list node
+} schptr_list_node_t;
 
-struct schprim_val
+typedef struct schptr_list
 {
-  schprim_t *header;
-  schptr_t *args;
-};
-typedef struct schprim_val schprim_val_t;
+  sch_type type;             // Type (always SCH_PTR_LIST
+  schptr_list_node_t *node;  // Pointer to first node in list
+} schptr_list_t;
 
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
 
 schprim_t primitives[] =
-  { { "fxadd1", 1, emit_asm_prim_fxadd1 } };
+  { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 } };
+const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
+
+
+///////////////////////////////////////////////////////////////////////
+//
+//  List utilities
+//
+//
+///////////////////////////////////////////////////////////////////////
+schptr_list_node_t *
+reverse_list (schptr_list_node_t *lst)
+{
+  schptr_list_node_t *curr = NULL;
+  schptr_list_node_t *prev = NULL;
+  schptr_list_node_t *next = NULL;
+  curr = lst;
+
+  while (curr != NULL)
+    {
+      next = curr->next;
+      curr->next = prev;
+      prev = curr;
+      curr = next;
+    }
+
+  return prev;
+}
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -168,11 +194,26 @@ schprim_t primitives[] =
 //
 ///////////////////////////////////////////////////////////////////////
 
-char *
-skip_space (char *input)
+bool parse_prim (const char **, schptr_t *);
+bool parse_expr (const char **, schptr_t *);
+bool parse_imm (const char **, schptr_t *);
+bool parse_imm_bool (const char **, schptr_t *);
+bool parse_imm_null (const char **, schptr_t *);
+bool parse_imm_fixnum (const char **, schptr_t *);
+bool parse_imm_char (const char **, schptr_t *);
+
+bool parse_char (const char **, char);
+bool parse_lparen (const char **);
+bool parse_rparen (const char **);
+bool skip_whitespace (const char **input);
+
+bool
+skip_whitespace (const char **input)
 {
-  while (isspace (*input)) input++;
-  return input;
+  const char *tmp = *input;
+  while (isspace (**input))
+    (*input)++;
+  return *input != tmp; // return true if whitespace was skipped
 }
 
 bool
@@ -182,10 +223,7 @@ parse_imm_bool (const char **input, schptr_t *imm)
     {
       if ((*input)[1] == 't' || (*input)[1] == 'f')
         {
-          // Booleans are represented as:
-          // false: 00101111 (0x2f)
-          // true:  01101111 (0x6f)
-          *imm = ((*input)[1] == 't') ? (schptr_t) 0x6f : (schptr_t) 0x2f;
+          *imm = sch_encode_imm_bool((*input)[1] == 't');
           *input += 2;
           return true;
         }
@@ -219,8 +257,8 @@ parse_imm_fixnum (const char **input, schptr_t *imm)
       if (sign && *sign == '-')
         fx = -v;
 
-      // Fixnums have two bottom bits as 0
-      *imm = (schptr_t) (fx << 2);
+      *imm = sch_encode_imm_fixnum (fx);
+      *input = ptr;
       return true;
     }
 
@@ -292,8 +330,7 @@ parse_imm_char (const char **input, schptr_t *imm)
           exit (EXIT_FAILURE);
         }
 
-      // Chars have the lowest byte as 0x0f
-      *imm = (c << 8) | 0x0f;
+      *imm = sch_encode_imm_char (c);
       return true;
     }
 
@@ -309,9 +346,7 @@ parse_imm_null (const char **input, schptr_t *imm)
       (*input)[3] == 'l')
     {
       *input += 4;
-
-      // null is represented as 0x3f
-      *imm = 0x3f;
+      *imm = sch_encode_imm_null ();
       return true;
     }
 
@@ -329,30 +364,62 @@ parse_imm (const char **input, schptr_t *imm)
 }
 
 bool
+skip_char (const char **input, char c)
+{
+  if (**input == c)
+    {
+      (*input)++;
+      return true;
+    }
+  return false;
+}
+
+bool
+skip_lparen (const char **input)
+{
+  return skip_char (input, '(');
+}
+
+bool
+skip_rparen (const char **input)
+{
+  return skip_char (input, ')');
+}
+
+
+bool
 parse_expr (const char **input, schptr_t *sptr)
 {
-  if (!parse_lparen (input))
+  // An expression is an immediate
+  // or an expression that starts with a parenthesis
+
+  if (parse_imm (input, sptr) ||
+      parse_prim (input, sptr))
+    return true;
+
+  if (!skip_lparen (input))
     return false;
 
   // Setup list to keep values parsed inside expression
+  schptr_list_node_t *e = NULL;
 
-  while (!parse_rparen (input))
+  while (!skip_rparen (input))
     {
       skip_whitespace (input);
 
-      schptr_t sptr = 0;
-
-      if (parse_imm (input, &sptr))
+      schptr_t tmp;
+      if (parse_expr (input, &tmp))
         {
+          schptr_list_node_t *node = malloc (sizeof *node);
+          if (!node)
+            {
+              fprintf (stderr, "oom\n");
+              exit (EXIT_FAILURE);
+            }
 
-        }
-      else if (parse_prim (input, &sptr))
-        {
-
-        }
-      else if (parse_expr (input, &sptr))
-        {
-
+          node->ptr = tmp;
+          node->next = e;
+          e = node;
         }
       else
         {
@@ -362,17 +429,33 @@ parse_expr (const char **input, schptr_t *sptr)
 
     }
 
+  schptr_list_t *lst = malloc (sizeof *lst);
+  if (!lst)
+    {
+      fprintf (stderr, "oom\n");
+      exit (EXIT_FAILURE);
+    }
+
+  lst->type = SCH_PTR_LIST;
+  lst->node = reverse_list (e);
+  *sptr = (schptr_t) lst;
   return true;
 }
 
 bool
 parse_prim (const char **input, schptr_t *sptr)
 {
-  if (parse_lparen (input) &&
-      skip_whitespace (input) &&
-      parse_prim_name (input))
-    
-      
+  for (size_t i = 0; i < primitives_count; i++)
+    {
+      schprim_t prim = primitives[i];
+      if (!strncmp (prim.name, *input, strlen (prim.name)))
+        {
+          *sptr = (schptr_t)&prim;
+          (*input) += strlen (prim.name);
+          return true;
+        }
+    }
+  return false;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -391,6 +474,10 @@ parse_prim (const char **input, schptr_t *sptr)
 #else
 #  error "Unsupported platform"
 #endif
+
+void emit_asm_epilogue (FILE *);
+void emit_asm_prologue (FILE *, const char *);
+void emit_asm_imm (FILE *, schptr_t);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -427,27 +514,55 @@ emit_asm_imm (FILE *f, schptr_t imm)
 }
 
 void
-emit_asm_generic (FILE *f, schptr_t sptr)
+emit_asm_prim (FILE *f, schptr_t sptr)
 {
-  assert (sch_ptr_p (sptr));
+  schprim_t *prim = (schprim_t *)sptr;
+  assert (prim->type == SCH_PRIM);
 
-  emit_asm_prim_fxadd1 (f, (sch_prim *) sptr);
+  prim->emitter (f, prim);
 }
 
 void
 emit_asm_expr (FILE *f, schptr_t sptr)
 {
   if (sch_imm_p (sptr))
-    emit_asm_imm (f, sptr);
-  else
-    emit_asm_generic (f, sptr);
+    {
+      emit_asm_imm (f, sptr);
+      return;
+    }
+
+  assert (sch_ptr_p (sptr));
+
+  sch_type type = *((sch_type *)sptr);
+  switch (type)
+    {
+    case SCH_PRIM:
+      emit_asm_prim (f, sptr);
+      break;
+    case SCH_PTR_LIST:
+      // First emit the value of all the elements 2-end and then the first
+      // This causes all arguments to be evaluates
+      {
+        const schptr_list_t *lst = (schptr_list_t *)sptr;
+        const schptr_list_node_t *node = lst->node;
+        assert (node); // node is not null, otherwise it would have been parsed as an immediate
+
+        for (const schptr_list_node_t *args = node->next; args; args = args->next)
+          emit_asm_expr (f, (schptr_t) args);
+        emit_asm_expr (f, (schptr_t) node);
+      }
+      break;
+    default:
+      fprintf (stderr, "unknown type 0x%08x\n", type);
+      assert (false); // unreachable
+      break;
+    }
 }
 
 // Primitives Emitter
 void
-emit_asm_prim_fxadd1 (FILE *f, sch_prim *p)
+emit_asm_prim_fxadd1 (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  emit_asm_expr (f, p);
   fprintf (f, "    addl $4, %%eax");
 }
 
@@ -502,8 +617,8 @@ find_system_tmpdir ()
 void
 compile_expression (const char *e)
 {
-  schptr_t imm = 0;
-  bool parsed = parse_imm (&e, &imm);
+  schptr_t sptr = 0;
+  bool parsed = parse_expr (&e, &sptr);
 
   if (!parsed)
     {
@@ -532,7 +647,7 @@ compile_expression (const char *e)
 
   // write asm file
   emit_asm_prologue (i, "scheme_entry");
-  emit_asm_imm (i, imm);
+  emit_asm_expr (i, sptr);
   emit_asm_epilogue (i);
 
   // close file

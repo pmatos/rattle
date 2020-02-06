@@ -23,13 +23,13 @@
 //
 // Platform
 //
-inline bool
+static inline bool
 arch_32_p (void)
 {
   return sizeof (size_t) == 4;
 }
 
-inline bool
+static inline bool
 arch_64_p (void)
 {
   return sizeof (size_t) == 8;
@@ -90,13 +90,13 @@ arch_64_p (void)
 // Boolean False: 0x6e - 0b 0010 1110
 // Character:     0x0e - 0b 0000 1110
 
-typedef uint64_t schptr_t;
+typedef uintptr_t schptr_t;
 
 //
 // Pointers
 //
 
-inline bool
+static inline bool
 sch_ptr_p (schptr_t sptr)
 {
   return (sptr & PTR_MASK) == PTR_TAG;
@@ -106,7 +106,7 @@ sch_ptr_p (schptr_t sptr)
 // Immediates
 //
 
-inline bool
+static inline bool
 sch_imm_p (schptr_t sptr)
 {
   return !sch_ptr_p (sptr);
@@ -115,13 +115,13 @@ sch_imm_p (schptr_t sptr)
 //
 // Fixnum
 //
-inline bool
+static inline bool
 sch_imm_fixnum_p (schptr_t sptr)
 {
   return (sptr & FX_MASK) == FX_TAG;
 }
 
-inline schptr_t
+static inline schptr_t
 sch_encode_imm_fixnum (int64_t fx)
 {
   assert (fx <= FX_MAX);
@@ -130,7 +130,7 @@ sch_encode_imm_fixnum (int64_t fx)
   return (fx << FX_SHIFT) | FX_TAG;
 }
 
-inline uint64_t
+static inline uint64_t
 sch_decode_imm_fixnum (schptr_t sptr)
 {
   return sptr >> FX_SHIFT;
@@ -140,13 +140,13 @@ sch_decode_imm_fixnum (schptr_t sptr)
 // Null
 //
 
-inline bool
+static inline bool
 sch_imm_null_p (schptr_t sptr)
 {
   return sptr == NULL_CST;
 }
 
-inline schptr_t
+static inline schptr_t
 sch_encode_imm_null (void)
 {
   return NULL_CST;
@@ -156,31 +156,31 @@ sch_encode_imm_null (void)
 //
 // Bool
 //
-inline bool
+static inline bool
 sch_imm_bool_p (schptr_t sptr)
 {
   return (sptr & BOOL_MASK) == BOOL_TAG;
 }
 
-inline schptr_t
+static inline schptr_t
 sch_encode_imm_bool (bool b)
 {
   return ((schptr_t)b << BOOL_SHIFT) | BOOL_TAG;
 }
 
-inline bool
+static inline bool
 sch_decode_imm_bool (schptr_t sptr)
 {
   return sptr >> BOOL_SHIFT;
 }
 
-inline bool
+static inline bool
 sch_imm_false_p (schptr_t sptr)
 {
   return sptr == FALSE_CST;
 }
 
-inline bool
+static inline bool
 sch_imm_true_p (schptr_t sptr)
 {
   return sptr == TRUE_CST;
@@ -190,19 +190,19 @@ sch_imm_true_p (schptr_t sptr)
 // Characters
 //
 
-inline bool
+static inline bool
 sch_imm_char_p (schptr_t sptr)
 {
   return (sptr & CHAR_MASK) == CHAR_TAG;
 }
 
-inline schptr_t
+static inline schptr_t
 sch_encode_imm_char (unsigned char c)
 {
   return (c << CHAR_SHIFT) | CHAR_TAG;
 }
 
-inline unsigned char
+static inline unsigned char
 sch_decode_imm_char (schptr_t sptr)
 {
   return sptr >> CHAR_SHIFT;

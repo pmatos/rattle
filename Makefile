@@ -7,14 +7,17 @@ LDFLAGS = -ldl
 
 ifdef DEBUG
 CFLAGS := $(CFLAGS) -O0 -g -fsanitize=undefined
+LDFLAGS := $(LDFLAGS) -fsanitize=undefined
 else ifdef COVERAGE	
 CFLAGS := $(CFLAGS) -O0 -g
 EXTRA_CFLAGS := --coverage
 else
-CFLAGS := $(CFLAGS) -O3
+CPPFLAGS := -DNDEBUG
+CFLAGS := $(CFLAGS) -O3 -flto
+LDFLAGS := $(LDFLAGS) $(CFLAGS)
 endif
 
-CFLAGS := $(CFLAGS) -Werror -Wall -Wextra
+CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
 
 # Sources and Dependencies
 SRCS = src/rattle.c
@@ -28,7 +31,7 @@ include .depend
 
 # Rules
 rattle.o: $(SRCS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $(SRCS) -o $@ $(LDFLAGS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -c $(SRCS) -o $@
 rattle: rattle.o
 	$(CC) $^ -o $@ $(LDFLAGS)
 
@@ -40,4 +43,4 @@ tests:
 
 .PHONY: clean
 clean:
-	$(RM) rattle runtime.o
+	$(RM) rattle runtime.o rattle.o
