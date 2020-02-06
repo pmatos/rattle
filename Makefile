@@ -8,6 +8,13 @@ LDFLAGS = -ldl
 ifdef DEBUG
 CFLAGS := $(CFLAGS) -O0 -g
 LDFLAGS := $(LDFLAGS)
+
+# UBSAN only works when DEBUG=1
+ifdef UBSAN
+CFLAGS := $(CFLAGS) -fsanitize=undefined
+LDFLAGS := $(LDFLAGS) -fsanitize=undefined
+endif
+
 else ifdef COVERAGE	
 CFLAGS := $(CFLAGS) -O0 -g
 LDFLAGS := $(LDFLAGS) --coverage 
