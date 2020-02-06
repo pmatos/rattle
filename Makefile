@@ -6,10 +6,11 @@ EXTRA_CFLAGS =
 LDFLAGS = -ldl
 
 ifdef DEBUG
-CFLAGS := $(CFLAGS) -O0 -g -fsanitize=undefined
-LDFLAGS := $(LDFLAGS) -fsanitize=undefined
+CFLAGS := $(CFLAGS) -O0 -g
+LDFLAGS := $(LDFLAGS)
 else ifdef COVERAGE	
 CFLAGS := $(CFLAGS) -O0 -g
+LDFLAGS := $(LDFLAGS) --coverage 
 EXTRA_CFLAGS := --coverage
 else
 CPPFLAGS := -DNDEBUG
