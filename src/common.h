@@ -127,13 +127,17 @@ sch_encode_imm_fixnum (int64_t fx)
   assert (fx <= FX_MAX);
   assert (fx >= FX_MIN);
 
-  return (fx << FX_SHIFT) | FX_TAG;
+  return (((uint64_t)fx) << FX_SHIFT) | FX_TAG;
 }
 
-static inline uint64_t
+static inline int64_t
 sch_decode_imm_fixnum (schptr_t sptr)
 {
-  return sptr >> FX_SHIFT;
+  // arithmetic right shift from hackers delight
+  // gcc does signed shift but it's implementation dependent
+  // so until we determine what the compiler uses we leave this implementation here
+  const uint64_t t = -(sptr >> 63);
+  return ((sptr ^ t) >> FX_SHIFT) ^ t;
 }
 
 //

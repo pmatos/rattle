@@ -157,9 +157,9 @@ typedef struct schptr_list
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
 
-schprim_t primitives[] =
+static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 } };
-const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
+static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -187,6 +187,23 @@ reverse_list (schptr_list_node_t *lst)
   return prev;
 }
 
+void
+free_list_nodes (schptr_list_node_t *lst)
+{
+  if (lst)
+    {
+      schptr_list_node_t *n = lst->next;
+      free (lst);
+      free_list_nodes (n);
+    }
+}
+
+void
+free_list (schptr_list_t *lst)
+{
+  free_list_nodes (lst->node);
+  free (lst);
+}
 ///////////////////////////////////////////////////////////////////////
 //
 //  Section Parsing
@@ -450,7 +467,7 @@ parse_prim (const char **input, schptr_t *sptr)
       schprim_t prim = primitives[i];
       if (!strncmp (prim.name, *input, strlen (prim.name)))
         {
-          *sptr = (schptr_t)&prim;
+          *sptr = (schptr_t)(&(primitives[i]));
           (*input) += strlen (prim.name);
           return true;
         }
@@ -543,13 +560,14 @@ emit_asm_expr (FILE *f, schptr_t sptr)
       // First emit the value of all the elements 2-end and then the first
       // This causes all arguments to be evaluates
       {
-        const schptr_list_t *lst = (schptr_list_t *)sptr;
-        const schptr_list_node_t *node = lst->node;
+        schptr_list_t *lst = (schptr_list_t *)sptr;
+        schptr_list_node_t *node = lst->node;
         assert (node); // node is not null, otherwise it would have been parsed as an immediate
 
         for (const schptr_list_node_t *arg = node->next; arg; arg = arg->next)
           emit_asm_expr (f, arg->ptr);
         emit_asm_expr (f, node->ptr);
+        free_list (lst);
       }
       break;
     default:
@@ -563,7 +581,8 @@ emit_asm_expr (FILE *f, schptr_t sptr)
 void
 emit_asm_prim_fxadd1 (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  fprintf (f, "    addl $4, %%eax");
+  const uint64_t cst = 1UL << FX_SHIFT;
+  fprintf (f, "    addl $%lu, %%eax\n", cst);
 }
 
 
