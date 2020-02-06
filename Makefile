@@ -21,6 +21,8 @@ endif
 CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
 
 # Sources and Dependencies
+# TODO: make runtime.c also depend on headers
+
 SRCS = src/rattle.c
 depend: .depend
 
