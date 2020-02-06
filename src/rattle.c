@@ -547,9 +547,9 @@ emit_asm_expr (FILE *f, schptr_t sptr)
         const schptr_list_node_t *node = lst->node;
         assert (node); // node is not null, otherwise it would have been parsed as an immediate
 
-        for (const schptr_list_node_t *args = node->next; args; args = args->next)
-          emit_asm_expr (f, (schptr_t) args);
-        emit_asm_expr (f, (schptr_t) node);
+        for (const schptr_list_node_t *arg = node->next; arg; arg = arg->next)
+          emit_asm_expr (f, arg->ptr);
+        emit_asm_expr (f, node->ptr);
       }
       break;
     default:
