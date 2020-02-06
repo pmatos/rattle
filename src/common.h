@@ -53,11 +53,11 @@ arch_64_p (void)
 #define PTR_MASK 0x7
 #define PTR_SHIFT 0
 //
-#define FX_TAG 0x1
+#define FX_TAG UINT64_C(0x1)
 #define FX_MASK 0x1
 #define FX_SHIFT 1
-#define FX_MAX 4611686018427387903LL
-#define FX_MIN -4611686018427387904LL
+#define FX_MAX INT64_C(4611686018427387903)
+#define FX_MIN INT64_C(-4611686018427387904)
 //
 #define CHAR_TAG 0x2
 #define CHAR_MASK 0x3
@@ -68,8 +68,8 @@ arch_64_p (void)
 #define BOOL_SHIFT 34
 //
 #define NULL_CST 0xc
-#define TRUE_CST 0x400000004
-#define FALSE_CST 0x4
+#define TRUE_CST UINT64_C(0x400000004)
+#define FALSE_CST UINT64_C(0x4)
 //
 /////////////////////////////////////////////////////
 

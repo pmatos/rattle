@@ -156,9 +156,14 @@ typedef struct schptr_list
 
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
+void emit_asm_prim_fxsub1 (FILE *, schprim_t *);
+void emit_asm_prim_fxzerop (FILE *, schprim_t *);
 
 static const schprim_t primitives[] =
-  { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 } };
+  { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
+    { SCH_PRIM, "fxsub1", 1, emit_asm_prim_fxsub1 },
+    { SCH_PRIM, "fxzero?", 1, emit_asm_prim_fxzerop }
+  };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
 
@@ -582,7 +587,23 @@ void
 emit_asm_prim_fxadd1 (FILE *f, schprim_t *p __attribute__((unused)))
 {
   const uint64_t cst = 1UL << FX_SHIFT;
-  fprintf (f, "    addl $%lu, %%eax\n", cst);
+  fprintf (f, "    addq $%lu, %%rax\n", cst);
+}
+
+void
+emit_asm_prim_fxsub1 (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  const uint64_t cst = 1UL << FX_SHIFT;
+  fprintf (f, "    subq $%lu, %%rax\n", cst);
+}
+
+void
+emit_asm_prim_fxzerop (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  fprintf (f, "    movl   $%" PRIu64 ", %%edx\n", FALSE_CST);
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FX_TAG);
+  fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", TRUE_CST);
+  fprintf (f, "    cmovne %%rdx, %%rax\n");
 }
 
 
