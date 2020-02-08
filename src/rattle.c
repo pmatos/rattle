@@ -158,11 +158,15 @@ typedef struct schptr_list
 void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
 void emit_asm_prim_fxsub1 (FILE *, schprim_t *);
 void emit_asm_prim_fxzerop (FILE *, schprim_t *);
+void emit_asm_prim_char_to_fixnum (FILE *, schprim_t *);
+void emit_asm_prim_fixnum_to_char (FILE *, schprim_t *);
 
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
     { SCH_PRIM, "fxsub1", 1, emit_asm_prim_fxsub1 },
-    { SCH_PRIM, "fxzero?", 1, emit_asm_prim_fxzerop }
+    { SCH_PRIM, "fxzero?", 1, emit_asm_prim_fxzerop },
+    { SCH_PRIM, "char->fixnum", 1, emit_asm_prim_char_to_fixnum },
+    { SCH_PRIM, "fixnum->char", 1, emit_asm_prim_fixnum_to_char }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
@@ -606,6 +610,23 @@ emit_asm_prim_fxzerop (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    cmovne %%rdx, %%rax\n");
 }
 
+void
+emit_asm_prim_char_to_fixnum (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    sarq   $%du, %%rax\n", CHAR_SHIFT);
+  fprintf (f, "    salq   $%du, %%rax\n", FX_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
+}
+
+void
+emit_asm_prim_fixnum_to_char (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    sarq   $%du, %%rax\n", FX_SHIFT);
+  fprintf (f, "    salq   $%du, %%rax\n", CHAR_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", CHAR_TAG);
+}
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -615,7 +636,6 @@ emit_asm_prim_fxzerop (FILE *f, schprim_t *p __attribute__((unused)))
 //
 //
 ///////////////////////////////////////////////////////////////////////
-
 
 // Evaluation
 void
