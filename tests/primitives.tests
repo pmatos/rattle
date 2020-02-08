@@ -1,0 +1,65 @@
+(fxadd1 0) => 1
+--
+(fxadd1 -1) => 0
+--
+(fxadd1 1) => 2
+--
+(fxadd1 -100) => -99
+--
+(fxadd1 1000) => 1001
+--
+(fxadd1 536870910) => 536870911
+--
+(fxadd1 -536870912) => -536870911
+--
+(fxadd1 (fxadd1 0)) => 2
+--
+(fxadd1 (fxadd1 (fxadd1 (fxadd1 (fxadd1 (fxadd1 12)))))) => 18
+--
+(fxsub1 0) => -1
+--
+(fxsub1 -1) => -2
+--
+(fxsub1 1) => 0
+--
+(fxsub1 -100) => -101
+--
+(fxsub1 1000) => 999
+--
+(fxsub1 536870911) => 536870910
+--
+(fxsub1 -536870911) => -536870912
+--
+(fxsub1 (fxsub1 0)) => -2
+--
+(fxsub1 (fxsub1 (fxsub1 (fxsub1 (fxsub1 (fxsub1 12)))))) => 6
+--
+(fxsub1 (fxadd1 0)) => 0
+--
+(fixnum->char 65) => #\A
+--
+(fixnum->char 97) => #\a
+--
+(fixnum->char 122) => #\z
+--
+(fixnum->char 90) => #\Z
+--
+(fixnum->char 48) => #\0
+--
+(fixnum->char 57) => #\9
+--
+(char->fixnum #\A) => 65
+--
+(char->fixnum #\a) => 97
+--
+(char->fixnum #\z) => 122
+--
+(char->fixnum #\Z) => 90
+--
+(char->fixnum #\0) => 48
+--
+(char->fixnum #\9) => 57
+--
+(char->fixnum (fixnum->char 12)) => 12
+--
+(fixnum->char (char->fixnum #\x)) => #\x
