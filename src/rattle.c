@@ -277,7 +277,7 @@ parse_imm_fixnum (const char **input, schptr_t *imm)
       v = (v * 10) + (*ptr - '0');
     }
 
-  if (seen_num && v <= FIXNUM_MAX)
+  if (seen_num && v <= FX_MAX)
     {
       int64_t fx =  (int64_t) v;
       if (sign && *sign == '-')
