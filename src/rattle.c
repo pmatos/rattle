@@ -355,6 +355,29 @@ compile(const char *input, const char *output)
   (void) output;
   assert(false);
 }
+
+const char *
+find_system_tmpdir ()
+{ 
+  static const char *default_tmpdir = "/tmp/";
+
+  char *tmpdir = NULL;
+
+  if ((tmpdir = getenv ("TMPDIR")))
+    return tmpdir;
+  else if ((tmpdir = getenv ("TMP")))
+    return tmpdir;
+  else if ((tmpdir = getenv ("TEMPFILE")))
+    return tmpdir;
+  else if ((tmpdir = getenv ("TEMP")))
+    return tmpdir;
+
+  if (tmpdir)
+    return tmpdir;
+  else
+    return default_tmpdir;
+}
+
 void
 compile_expression (const char *e)
 {
@@ -367,8 +390,14 @@ compile_expression (const char *e)
       exit (EXIT_FAILURE);
     }
 
-  char itemplate[] = "/tmp/rattleXXXXXX.s";
-  char otemplate[] = "/tmp/librattleXXXXXX.so";
+  const char *tmpdir = find_system_tmpdir ();
+  char itemplate[1024];
+  char otemplate[1024];
+  strcpy (itemplate, tmpdir);
+  strcat (itemplate, "/rattleXXXXXX.s");
+  strcpy (otemplate, tmpdir);
+  strcat (otemplate, "/librattleXXXXXX.so");
+
   int ifd = mkstemps (itemplate, 2);
   int ofd = mkstemps (otemplate, 3);
 
