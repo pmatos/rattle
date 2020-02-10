@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y make curl xz-utils libsqlite3-dev python2.7 libtinfo5
+        apt-get install -y make curl xz-utils libsqlite3-dev python2.7 libtinfo5 binutils
     - name: Install infer
       env:
         VERSION: 0.17.0
