@@ -680,18 +680,23 @@ emit_asm_prim_fixnump (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    sarq   $%du, %%rax\n", FX_SHIFT);
   fprintf (f, "    testq  %%rax, %%rax\n");
   fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    salq   %" PRIu8", %%rax\n", BOOL_SHIFT);
 }
 
 void
 emit_asm_prim_boolp (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  assert (false); // TODO
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    sarq   $%du, %%rax\n", FX_SHIFT);
+  fprintf (f, "    testq  %%rax, %%rax\n");
+  fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    salq   %" PRIu8", %%rax\n", BOOL_SHIFT);
 }
 
 void
 emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  assert (false); // TODO
+  assert (false); //TODO
 }
 
 void
