@@ -1,0 +1,29 @@
+name: Infer CI
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  infer:
+
+    runs-on: ubuntu-latest
+    container: debian:buster-slim
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apt-get update 
+        apt-get install -y make curl xz-utils libsqlite3-dev python2.7
+    - name: Install infer
+      env:
+        VERSION: 0.17.0
+      run: |
+        curl -sSL "https://github.com/facebook/infer/releases/download/v$VERSION/infer-linux64-v$VERSION.tar.xz" | tar -C /opt -xJ 
+        ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer
+    - name: Build
+      env:
+        DEBUG: 1
+      run: infer run -- make
