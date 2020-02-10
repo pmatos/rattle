@@ -539,9 +539,9 @@ void
 emit_asm_imm (FILE *f, schptr_t imm)
 {
   if (imm > 4294967295)
-    fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", imm);
+    fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", (uint64_t)imm);
   else
-    fprintf (f, "    movl $%" PRIu64 ", %%eax\n", imm);
+    fprintf (f, "    movl $%" PRIu64 ", %%eax\n", (uint64_t)imm);
 }
 
 void
@@ -595,15 +595,15 @@ emit_asm_expr (FILE *f, schptr_t sptr)
 void
 emit_asm_prim_fxadd1 (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  const uint64_t cst = 1UL << FX_SHIFT;
-  fprintf (f, "    addq $%lu, %%rax\n", cst);
+  const uint64_t cst = UINT64_C(1) << FX_SHIFT;
+  fprintf (f, "    addq $%" PRIu64", %%rax\n", cst);
 }
 
 void
 emit_asm_prim_fxsub1 (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  const uint64_t cst = 1UL << FX_SHIFT;
-  fprintf (f, "    subq $%lu, %%rax\n", cst);
+  const uint64_t cst = UINT64_C(1) << FX_SHIFT;
+  fprintf (f, "    subq $%" PRIu64 ", %%rax\n", cst);
 }
 
 void
