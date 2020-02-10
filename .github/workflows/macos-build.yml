@@ -17,6 +17,10 @@ jobs:
         distribution: 'full'
         variant: 'CS'
         version: '7.5'
+    - name: see output
+      run: |
+        echo 'int foo(void) { return 1; }' > test.c
+        gcc -o- -S test.c        
     - name: Test fixnums
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/fixnum.tests
     - name: Test booleans
