@@ -169,6 +169,11 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "fxzero?", 1, emit_asm_prim_fxzerop },
     { SCH_PRIM, "char->fixnum", 1, emit_asm_prim_char_to_fixnum },
     { SCH_PRIM, "fixnum->char", 1, emit_asm_prim_fixnum_to_char }
+    { SCH_PRIM, "null?", 1, emit_asm_prim_nullp }
+    { SCH_PRIM, "not", 1, emit_asm_prim_not }
+    { SCH_PRIM, "fixnum?", 1, emit_asm_prim_fixnump }
+    { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp }
+    { SCH_PRIM, "char?", 1, emit_asm_prim_charp }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
@@ -417,7 +422,6 @@ skip_rparen (const char **input)
   return skip_char (input, ')');
 }
 
-
 bool
 parse_expr (const char **input, schptr_t *sptr)
 {
@@ -525,6 +529,42 @@ emit_asm_prologue (FILE *f, const char *name)
   fprintf (f, "    .type " ASM_SYMBOL_PREFIX "%s, @function\n", name);
   fprintf (f, ASM_SYMBOL_PREFIX "%s:\n", name);
 #endif
+  fprintf (f, "ptr_tag:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", PTR_MASK);
+  fprintf (f, "ptr_mask:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", PTR_TAG);
+  fprintf (f, "ptr_shift:\n");
+  fprintf (f, "    .byte %" PRIu8 "\n", PTR_SHIFT);
+
+  fprintf (f, "fx_tag:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", FX_MASK);
+  fprintf (f, "fx_mask:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", FX_TAG);
+  fprintf (f, "fx_shift:\n");
+  fprintf (f, "    .byte %" PRIu8 "\n", FX_SHIFT);
+
+  fprintf (f, "char_tag:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", CHAR_TAG);
+  fprintf (f, "char_mask:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", CHAR_MASK);
+  fprintf (f, "char_shift:\n");
+  fprintf (f, "    .byte %" PRIu8 "\n", CHAR_SHIFT);
+
+  fprintf (f, "bool_tag:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", BOOL_TAG);
+  fprintf (f, "bool_mask:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", BOOL_MASK);
+  fprintf (f, "bool_shift:\n");
+  fprintf (f, "    .byte %" PRIu8 "\n", BOOL_SHIFT);
+
+  fprintf (f, "null_cst:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", NULL_CST);
+
+  fprintf (f, "true_cst:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", TRUE_CST);
+
+  fprintf (f, "false_cst:\n");
+  fprintf (f, "    .quad %" PRIu64 "\n", FALSE_CST);
 }
 
 void
@@ -631,6 +671,62 @@ emit_asm_prim_fixnum_to_char (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    sarq   $%du, %%rax\n", FX_SHIFT);
   fprintf (f, "    salq   $%du, %%rax\n", CHAR_SHIFT);
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", CHAR_TAG);
+}
+
+void
+emit_asm_prim_fixnump (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    sarq   $%du, %%rax\n", FX_SHIFT);
+  fprintf (f, "    testq  %%rax, %%rax\n");
+  fprintf (f, "    sete   %%al\n");
+}
+
+void
+emit_asm_prim_boolp (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
+  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
+  fprintf (f, "    xor    eax, eax\n");
+  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
+  fprintf (f, "    sete   al\n");
+  fprintf (f, "    sal    rax, cl\n");
+  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
+}
+
+void
+emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
+  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
+  fprintf (f, "    xor    eax, eax\n");
+  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
+  fprintf (f, "    sete   al\n");
+  fprintf (f, "    sal    rax, cl\n");
+  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
+}
+
+void
+emit_asm_prim_charp (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
+  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
+  fprintf (f, "    xor    eax, eax\n");
+  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
+  fprintf (f, "    sete   al\n");
+  fprintf (f, "    sal    rax, cl\n");
+  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
+}
+void
+emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
+  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
+  fprintf (f, "    xor    eax, eax\n");
+  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
+  fprintf (f, "    sete   al\n");
+  fprintf (f, "    sal    rax, cl\n");
+  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
 }
 
 ///////////////////////////////////////////////////////////////////////
