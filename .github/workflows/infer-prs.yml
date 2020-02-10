@@ -1,0 +1,35 @@
+name: Infer Diff CI
+
+on: [pull_request]
+
+jobs:
+  infer-diff:
+
+    runs-on: ubuntu-latest
+    container: debian:buster-slim
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apt-get update 
+        apt-get install -y make curl xz-utils libsqlite3-dev python2.7 libtinfo5
+    - name: Install infer
+      env:
+        VERSION: 0.17.0
+      run: |
+        curl -sSL "https://github.com/facebook/infer/releases/download/v$VERSION/infer-linux64-v$VERSION.tar.xz" | tar -C /opt -xJ 
+        ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer
+    - name: Build
+      env:
+        DEBUG: 1
+      run: |
+        git diff --name-only HEAD..origin/master > index.txt
+        infer capture -- make
+        infer analyze --changed-files-index index.txt
+        cp infer-out/report.json report-feature.json
+        git checkout master
+        infer capture --reactive -- make
+        infer analyze --reactive --changed-files-index index.txt
+        infer reportdiff --report-current report-feature.json --report-previous infer-out/report.json
+        
