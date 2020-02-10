@@ -685,48 +685,24 @@ emit_asm_prim_fixnump (FILE *f, schprim_t *p __attribute__((unused)))
 void
 emit_asm_prim_boolp (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
-  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
-  fprintf (f, "    xor    eax, eax\n");
-  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
-  fprintf (f, "    sete   al\n");
-  fprintf (f, "    sal    rax, cl\n");
-  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
+  assert (false); // TODO
 }
 
 void
 emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
-  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
-  fprintf (f, "    xor    eax, eax\n");
-  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
-  fprintf (f, "    sete   al\n");
-  fprintf (f, "    sal    rax, cl\n");
-  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
+  assert (false); // TODO
 }
 
 void
 emit_asm_prim_charp (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
-  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
-  fprintf (f, "    xor    eax, eax\n");
-  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
-  fprintf (f, "    sete   al\n");
-  fprintf (f, "    sal    rax, cl\n");
-  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
+  assert (false); //TODO
 }
 void
 emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  fprintf (f, "    movzx  ecx, BYTE PTR bool_shift[rip]\n");
-  fprintf (f, "    and    rdi, QWORD PTR fx_mask[rip]\n");
-  fprintf (f, "    xor    eax, eax\n");
-  fprintf (f, "    cmp    rdi, QWORD PTR fx_tag[rip]\n");
-  fprintf (f, "    sete   al\n");
-  fprintf (f, "    sal    rax, cl\n");
-  fprintf (f, "    or     rax, QWORD PTR bool_tag[rip]\n");
+  assert(false); //TODO
 }
 
 ///////////////////////////////////////////////////////////////////////
