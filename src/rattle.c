@@ -308,10 +308,19 @@ parse_imm (const char **input, sch_imm *imm)
 void
 emit_asm_prologue (FILE *f, const char *name)
 {
+#if defined(__APPLE__) || defined(__MACH__)
+  fprintf (f, "    .section	__TEXT,__text,regular,pure_instructions\n");
+  fprintf (f, "    .globl %s\n", name);
+  fprintf (f, "    .p2align 4, 0x90\n", name);
+  fprintf (f, "%s:\n", name);
+#elif defined(__linux__)
   fprintf (f, "    .text\n");
   fprintf (f, "    .globl %s\n", name);
   fprintf (f, "    .type %s, @function\n", name);
   fprintf (f, "%s:\n", name);
+#else
+  #error "Unsupported platform"
+#endif
 }
 
 void
