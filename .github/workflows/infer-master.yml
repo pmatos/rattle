@@ -26,4 +26,4 @@ jobs:
     - name: Build
       env:
         DEBUG: 1
-      run: infer run --default-checkers --bufferoverrun -- make
+      run: infer run --fail-in-issue --default-checkers --bufferoverrun -- make
