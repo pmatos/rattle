@@ -303,6 +303,13 @@ parse_imm (const char **input, sch_imm *imm)
 //
 ///////////////////////////////////////////////////////////////////////
 
+#if defined(__APPLE__) || defined(__MACH__)
+#  define ASM_SYMBOL_PREFIX "_"
+#elif defined(__linux__)
+#  define ASM_SYMBOL_PREFIX ""
+#else
+#  error "Unsupported platform"
+#endif
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -310,16 +317,14 @@ emit_asm_prologue (FILE *f, const char *name)
 {
 #if defined(__APPLE__) || defined(__MACH__)
   fprintf (f, "    .section	__TEXT,__text,regular,pure_instructions\n");
-  fprintf (f, "    .globl %s\n", name);
+  fprintf (f, "    .globl " ASM_SYMBOL_PREFIX "%s\n", name);
   fprintf (f, "    .p2align 4, 0x90\n");
   fprintf (f, "%s:\n", name);
 #elif defined(__linux__)
   fprintf (f, "    .text\n");
-  fprintf (f, "    .globl %s\n", name);
-  fprintf (f, "    .type %s, @function\n", name);
+  fprintf (f, "    .globl " ASM_SYMBOL_PREFIX "%s\n", name);
+  fprintf (f, "    .type " ASM_SYMBOL_PREFIX "%s, @function\n", name);
   fprintf (f, "%s:\n", name);
-#else
-  #error "Unsupported platform"
 #endif
 }
 
@@ -367,7 +372,7 @@ compile(const char *input, const char *output)
 
 const char *
 find_system_tmpdir ()
-{ 
+{
   static const char *default_tmpdir = "/tmp/";
 
   char *tmpdir = NULL;
