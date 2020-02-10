@@ -71,10 +71,12 @@ main(int argc, char *argv[]) {
           break;
         case 'c':
           compile_p = true;
-          input = strdup(optarg);
+          assert (false);
+          //input = strdup(optarg);
           break;
         case 'o':
-          output = strdup(optarg);
+          assert (false);
+          //output = strdup(optarg);
           break;
         case 'e':
           evaluate_p = true;
@@ -113,7 +115,7 @@ main(int argc, char *argv[]) {
     }
 
   if (compile_p)
-    compile(input, output);
+      compile(input, output);
 
   return 0;
 }
@@ -704,6 +706,11 @@ compile_expression (const char *e)
     }
 
   FILE *i = fdopen (ifd, "w");
+  if (!i)
+    {
+      fprintf (stderr, "cannot open file descriptor for `%s'\n", itemplate);
+      exit (EXIT_FAILURE);
+    }
 
   // write asm file
   emit_asm_prologue (i, "scheme_entry");
@@ -734,7 +741,6 @@ compile_expression (const char *e)
 
   // remove input file and close port
   unlink (itemplate);
-  close (ifd);
 
   // We have compiled the linked library so we are ready to
   // dynamically load the library
