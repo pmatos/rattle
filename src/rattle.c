@@ -319,12 +319,12 @@ emit_asm_prologue (FILE *f, const char *name)
   fprintf (f, "    .section	__TEXT,__text,regular,pure_instructions\n");
   fprintf (f, "    .globl " ASM_SYMBOL_PREFIX "%s\n", name);
   fprintf (f, "    .p2align 4, 0x90\n");
-  fprintf (f, "%s:\n", name);
+  fprintf (f, ASM_SYMBOL_PREFIX "%s:\n", name);
 #elif defined(__linux__)
   fprintf (f, "    .text\n");
   fprintf (f, "    .globl " ASM_SYMBOL_PREFIX "%s\n", name);
   fprintf (f, "    .type " ASM_SYMBOL_PREFIX "%s, @function\n", name);
-  fprintf (f, "%s:\n", name);
+  fprintf (f, ASM_SYMBOL_PREFIX "%s:\n", name);
 #endif
 }
 
