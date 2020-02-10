@@ -279,15 +279,18 @@ parse_imm_fixnum (const char **input, schptr_t *imm)
       v = (v * 10) + (*ptr - '0');
     }
 
-  if (seen_num && v <= FX_MAX)
+  if (seen_num)
     {
       int64_t fx =  (int64_t) v;
       if (sign && *sign == '-')
         fx = -v;
 
-      *imm = sch_encode_imm_fixnum (fx);
-      *input = ptr;
-      return true;
+      if (fx >= FX_MIN && fx <= FX_MAX)
+        {
+          *imm = sch_encode_imm_fixnum (fx);
+          *input = ptr;
+          return true;
+        }
     }
 
   return false;
