@@ -2,6 +2,7 @@
 all: rattle runtime.o
 
 # Flags
+CFLAGS = "-std=c11"
 EXTRA_CFLAGS =
 LDFLAGS = -ldl
 
