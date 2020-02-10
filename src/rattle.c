@@ -311,7 +311,7 @@ emit_asm_prologue (FILE *f, const char *name)
 #if defined(__APPLE__) || defined(__MACH__)
   fprintf (f, "    .section	__TEXT,__text,regular,pure_instructions\n");
   fprintf (f, "    .globl %s\n", name);
-  fprintf (f, "    .p2align 4, 0x90\n", name);
+  fprintf (f, "    .p2align 4, 0x90\n");
   fprintf (f, "%s:\n", name);
 #elif defined(__linux__)
   fprintf (f, "    .text\n");
