@@ -690,7 +690,7 @@ emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
   // I *don't* think this one can be optimized by fixing the values
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", NULL_CST);
   fprintf (f, "    sete   %%al\n");
-  fprintf (f, "    movbzl %%al, %%eax\n");
+  fprintf (f, "    movzbl %%al, %%eax\n");
   fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
