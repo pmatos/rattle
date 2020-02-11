@@ -100,3 +100,38 @@ jobs:
       run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/char.tests
     - name: Test primitives
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
+
+buildtest-ubsan:
+
+    runs-on: ubuntu-latest
+    container: debian:buster-slim
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apt-get update 
+        apt-get install -y make gcc gcc-8 g++ g++-8 sudo curl
+    - name: Versions
+      env:
+        CC: gcc-8
+      run: |
+        cc --version
+    - name: Build
+      run: make CC=gcc-8 DEBUG=1 UBSAN=1
+    - uses: Bogdanp/setup-racket@v0.5
+      with:
+        architecture: 'x64'
+        distribution: 'full'
+        variant: 'CS'
+        version: '7.5'
+    - name: Test null
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/null.tests
+    - name: Test fixnums
+      run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/fixnum.tests
+    - name: Test booleans
+      run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/boolean.tests
+    - name: Test characters
+      run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/char.tests
+    - name: Test primitives
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
