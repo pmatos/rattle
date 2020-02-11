@@ -76,7 +76,15 @@ jobs:
       run: |
         apt-get update 
         apt-get install -y make gcc gcc-8 g++ g++-8 sudo curl valgrind
+    - name: Versions
+      env:
+        CC: gcc-8
+      run: |
+        cc --version
+        valgrind --version
     - name: Build
+      env:
+        CC: gcc-8
       run: make
     - uses: Bogdanp/setup-racket@v0.5
       with:
