@@ -534,42 +534,6 @@ emit_asm_prologue (FILE *f, const char *name)
   fprintf (f, "    .type " ASM_SYMBOL_PREFIX "%s, @function\n", name);
   fprintf (f, ASM_SYMBOL_PREFIX "%s:\n", name);
 #endif
-  fprintf (f, "ptr_tag:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", PTR_MASK);
-  fprintf (f, "ptr_mask:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", PTR_TAG);
-  fprintf (f, "ptr_shift:\n");
-  fprintf (f, "    .byte %" PRIu8 "\n", PTR_SHIFT);
-
-  fprintf (f, "fx_tag:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", FX_MASK);
-  fprintf (f, "fx_mask:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", FX_TAG);
-  fprintf (f, "fx_shift:\n");
-  fprintf (f, "    .byte %" PRIu8 "\n", FX_SHIFT);
-
-  fprintf (f, "char_tag:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", CHAR_TAG);
-  fprintf (f, "char_mask:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", CHAR_MASK);
-  fprintf (f, "char_shift:\n");
-  fprintf (f, "    .byte %" PRIu8 "\n", CHAR_SHIFT);
-
-  fprintf (f, "bool_tag:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", BOOL_TAG);
-  fprintf (f, "bool_mask:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", BOOL_MASK);
-  fprintf (f, "bool_shift:\n");
-  fprintf (f, "    .byte %" PRIu8 "\n", BOOL_SHIFT);
-
-  fprintf (f, "null_cst:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", NULL_CST);
-
-  fprintf (f, "true_cst:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", TRUE_CST);
-
-  fprintf (f, "false_cst:\n");
-  fprintf (f, "    .quad %" PRIu64 "\n", FALSE_CST);
 }
 
 void
