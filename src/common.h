@@ -36,6 +36,16 @@ arch_64_p (void)
 }
 
 // On MacOS Xcode 11, UINT8_C seems to be a no-op and this causes a few warnings
+// This what we are seeing on GitHub workflow:
+//   src/rattle.c:630:50: error: format specifies type 'unsigned char' but the argument has type 'int' [-Werror,-Wformat]
+//      fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
+//                                ~~~~~~~~              ^~~~~~~~~~
+//     src/common.h:64:20: note: expanded from macro 'CHAR_SHIFT'
+//     #define CHAR_SHIFT UINT8_C(2)
+//                        ^~~~~~~~~~
+//     /Applications/Xcode_11.3.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/stdint.h:67:22: note: expanded from macro 'UINT8_C'
+//     #define UINT8_C(v)   (v)
+//                          ~~
 #if defined(__APPLE__) || defined(__MACH__)
 # undef UINT8_C
 # define UINT8_C(x) (unsigned char)(x)
