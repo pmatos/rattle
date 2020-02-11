@@ -33,4 +33,8 @@ jobs:
         infer capture --reactive -- make
         infer analyze --reactive --changed-files-index index.txt
         infer reportdiff --report-current report-feature.json --report-previous infer-out/report.json
+    - uses: actions/upload-artifact@master
+      with:
+        name: infer-differential
+        path: infer-out
         
