@@ -24,6 +24,8 @@ jobs:
         distribution: 'full'
         variant: 'CS'
         version: '7.5'
+    - name: Test null
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/null.tests
     - name: Test fixnums
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/fixnum.tests
     - name: Test booleans
@@ -52,6 +54,8 @@ jobs:
         apk add make gcc g++ sudo curl
     - name: Build
       run: make
+    - name: Test null
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/null.tests
     - name: Test fixnums
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/fixnum.tests
     - name: Test booleans
@@ -80,6 +84,8 @@ jobs:
         distribution: 'full'
         variant: 'CS'
         version: '7.5'
+    - name: Test null
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/null.tests
     - name: Test fixnums
       run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/fixnum.tests
     - name: Test booleans
