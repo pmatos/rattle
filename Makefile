@@ -22,7 +22,7 @@ LDFLAGS := $(LDFLAGS) --coverage
 EXTRA_CFLAGS := --coverage
 else
 CPPFLAGS := -DNDEBUG
-CFLAGS := $(CFLAGS) -O3 -flto
+CFLAGS := $(CFLAGS) -O3 -flto -march=native
 LDFLAGS := $(LDFLAGS) $(CFLAGS)
 endif
 
