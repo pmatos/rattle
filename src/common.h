@@ -35,6 +35,12 @@ arch_64_p (void)
   return sizeof (size_t) == 8;
 }
 
+// On MacOS Xcode 11, UINT8_C seems to be a no-op and this causes a few warnings
+#if defined(__APPLE__) || defined(__MACH__)
+# undef UINT8_C
+# define UINT8_C(x) (unsigned char)(x)
+#endif
+
 // malloc returns pointers that are always alignof(max_align_t) aligned.
 // Which means we can distinguish integers that are pointers from
 // integers that are not and can represent immediates.
