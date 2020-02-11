@@ -319,52 +319,52 @@ parse_imm_char (const char **input, schptr_t *imm)
       if (!strncmp (ptr, "alarm", 5))
         {
           c = 0x7;
-          *input += 5;
+          *input += 7;
         }
       else if (!strncmp (ptr, "backspace", 9))
         {
           c = 0x8;
-          *input += 9;
+          *input += 11;
         }
       else if (!strncmp (ptr, "delete", 6))
         {
           c = 0x7f;
-          *input += 6;
+          *input += 8;
         }
       else if (!strncmp (ptr, "escape", 6))
         {
           c = 0x1b;
-          *input += 6;
+          *input += 8;
         }
       else if (!strncmp (ptr, "newline", 7))
         {
           c = 0xa;
-          *input += 7;
+          *input += 9;
         }
       else if (!strncmp (ptr, "null", 4))
         {
           c = 0x0;
-          *input += 4;
+          *input += 6;
         }
       else if (!strncmp (ptr, "return", 6))
         {
           c = 0xd;
-          *input += 6;
+          *input += 8;
         }
       else if (!strncmp (ptr, "space", 5))
         {
           c = (uint64_t)' ';
-          *input += 5;
+          *input += 7;
         }
       else if (!strncmp (ptr, "tab", 3))
         {
           c = 0x9;
-          *input += 3;
+          *input += 5;
         }
       else if (isascii(ptr[2])) // Simple case: #\X where X is ascii
         {
           c = (*input)[2];
-          *input += 3;
+          *input += 5;
         }
       else
         {
