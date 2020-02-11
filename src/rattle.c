@@ -696,18 +696,30 @@ emit_asm_prim_boolp (FILE *f, schprim_t *p __attribute__((unused)))
 void
 emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  assert (false); //TODO
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    sarq   $%du, %%rax\n", BOOL_SHIFT);
+  fprintf (f, "    xorq   $1, %%rax\n");
+  fprintf (f, "    salq   %" PRIu8", %%rax\n", BOOL_SHIFT);
 }
 
 void
 emit_asm_prim_charp (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  assert (false); //TODO
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", CHAR_MASK);
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", CHAR_TAG);
+  fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    movzbl %%al, %%eax\n");
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
 }
 void
 emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  assert(false); //TODO
+  // I *don't* think this one can be optimized by fixing the values
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", NULL_CST);
+  fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    movbzl %%al, %%eax\n");
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
 }
 
 ///////////////////////////////////////////////////////////////////////
