@@ -162,17 +162,22 @@ void emit_asm_prim_fxsub1 (FILE *, schprim_t *);
 void emit_asm_prim_fxzerop (FILE *, schprim_t *);
 void emit_asm_prim_char_to_fixnum (FILE *, schprim_t *);
 void emit_asm_prim_fixnum_to_char (FILE *, schprim_t *);
+void emit_asm_prim_nullp (FILE *, schprim_t *);
+void emit_asm_prim_fixnump (FILE *, schprim_t *);
+void emit_asm_prim_booleanp (FILE *, schprim_t *);
+void emit_asm_prim_charp (FILE *, schprim_t *);
+void emit_asm_prim_not (FILE *, schprim_t *);
 
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
     { SCH_PRIM, "fxsub1", 1, emit_asm_prim_fxsub1 },
     { SCH_PRIM, "fxzero?", 1, emit_asm_prim_fxzerop },
     { SCH_PRIM, "char->fixnum", 1, emit_asm_prim_char_to_fixnum },
-    { SCH_PRIM, "fixnum->char", 1, emit_asm_prim_fixnum_to_char }
-    { SCH_PRIM, "null?", 1, emit_asm_prim_nullp }
-    { SCH_PRIM, "not", 1, emit_asm_prim_not }
-    { SCH_PRIM, "fixnum?", 1, emit_asm_prim_fixnump }
-    { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp }
+    { SCH_PRIM, "fixnum->char", 1, emit_asm_prim_fixnum_to_char },
+    { SCH_PRIM, "null?", 1, emit_asm_prim_nullp },
+    { SCH_PRIM, "not", 1, emit_asm_prim_not },
+    { SCH_PRIM, "fixnum?", 1, emit_asm_prim_fixnump },
+    { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp },
     { SCH_PRIM, "char?", 1, emit_asm_prim_charp }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
@@ -684,7 +689,7 @@ emit_asm_prim_fixnump (FILE *f, schprim_t *p __attribute__((unused)))
 }
 
 void
-emit_asm_prim_boolp (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_booleanp (FILE *f, schprim_t *p __attribute__((unused)))
 {
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    sarq   $%du, %%rax\n", FX_SHIFT);
