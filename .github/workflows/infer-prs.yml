@@ -36,5 +36,5 @@ jobs:
     - uses: actions/upload-artifact@master
       with:
         name: infer-differential
-        path: infer-out
+        path: infer-out/differential
         
