@@ -364,7 +364,7 @@ parse_imm_char (const char **input, schptr_t *imm)
       else if (isascii(ptr[2])) // Simple case: #\X where X is ascii
         {
           c = (*input)[2];
-          *input += 5;
+          *input += 3;
         }
       else
         {
