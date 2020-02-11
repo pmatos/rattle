@@ -101,7 +101,7 @@ jobs:
     - name: Test primitives
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
 
-buildtest-ubsan:
+  buildtest-ubsan:
 
     runs-on: ubuntu-latest
     container: debian:buster-slim
