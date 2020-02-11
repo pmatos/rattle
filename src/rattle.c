@@ -257,6 +257,7 @@ skip_whitespace (const char **input)
 bool
 parse_imm_bool (const char **input, schptr_t *imm)
 {
+  // TODO: Support #true and #false
   if ((*input)[0] == '#')
     {
       if ((*input)[1] == 't' || (*input)[1] == 'f')
