@@ -663,14 +663,20 @@ emit_asm_prim_booleanp (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
+// Not will return #t for #f and #f for anything else,
+// because all values evaluate to #t
+// section 6.3 of r7rs:
+//     "Of all the Scheme values, only#fcounts as false
+//      in condi-tional expressions.  All other Scheme
+//      values, including#t,count as true."
 void
 emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
 {
-  // This can be improved if we set the tags, masks and shifts in stone
-  fprintf (f, "    sarq   $%du, %%rax\n", BOOL_SHIFT);
-  fprintf (f, "    xorq   $1, %%rax\n");
-  fprintf (f, "    salq   $%" PRIu8", %%rax\n", BOOL_SHIFT);
-  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
+  // I *don't* think this one can be optimized by fixing the values
+  fprintf (f, "    movq    $%" PRIu64 ", %%rdx\n", FALSE_CST);
+  fprintf (f, "    cmpq    $%" PRIu64 ", %%rax\n", FALSE_CST);
+  fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", TRUE_CST);
+  fprintf (f, "    cmovne  %%rdx, %%rax\n");
 }
 
 void
