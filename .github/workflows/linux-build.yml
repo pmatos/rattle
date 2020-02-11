@@ -83,9 +83,7 @@ jobs:
         cc --version
         valgrind --version
     - name: Build
-      env:
-        CC: gcc-8
-      run: make
+      run: make DEBUG=1 CC=gcc-8
     - uses: Bogdanp/setup-racket@v0.5
       with:
         architecture: 'x64'
