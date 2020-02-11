@@ -35,7 +35,8 @@ jobs:
         infer reportdiff --report-current report-feature.json --report-previous infer-out/report.json
         [[ $(< infer-out/differential/introduced.json) == '[]' ]] 
     - uses: actions/upload-artifact@master
+      if: always()
       with:
         name: infer-differential
         path: infer-out/differential
-        
+
