@@ -51,21 +51,21 @@ arch_64_p (void)
 // bitwidth: 64, tag bitwidth: 4, pointer mask: 0x7
 #define PTR_TAG UINT64_C(0)
 #define PTR_MASK UINT64_C(0x7)
-#define PTR_SHIFT 0
+#define PTR_SHIFT UINT8_C(0)
 //
 #define FX_TAG UINT64_C(0x1)
 #define FX_MASK UINT64_C(0x1)
-#define FX_SHIFT 1
+#define FX_SHIFT UINT8_C(1)
 #define FX_MAX INT64_C(4611686018427387903)
 #define FX_MIN INT64_C(-4611686018427387904)
 //
 #define CHAR_TAG UINT64_C(0x2)
 #define CHAR_MASK UINT64_C(0x3)
-#define CHAR_SHIFT 2
+#define CHAR_SHIFT UINT8_C(2)
 //
 #define BOOL_TAG UINT64_C(0x4)
 #define BOOL_MASK UINT64_C(0xf)
-#define BOOL_SHIFT 34
+#define BOOL_SHIFT UINT8_C(34)
 //
 #define NULL_CST UINT64_C(0xc)
 #define TRUE_CST UINT64_C(0x400000004)
