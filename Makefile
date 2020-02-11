@@ -1,22 +1,50 @@
 # Rattle Makefile
 all: rattle runtime.o
 
+# Flags
+CFLAGS = -std=gnu11
 EXTRA_CFLAGS =
 LDFLAGS = -ldl
 
 ifdef DEBUG
-CFLAGS := $(CFLAGS) -O0 -g -fsanitize=undefined
-else ifdef COVERAGE	
 CFLAGS := $(CFLAGS) -O0 -g
-EXTRA_CFLAGS := --coverage
-else
-CFLAGS := $(CFLAGS) -O3
+LDFLAGS := $(LDFLAGS)
+
+# UBSAN only works when DEBUG=1
+ifdef UBSAN
+CFLAGS := $(CFLAGS) -fsanitize=undefined
+LDFLAGS := $(LDFLAGS) -fsanitize=undefined
 endif
 
-CFLAGS := $(CFLAGS) -Werror -Wall -Wextra
+else ifdef COVERAGE	
+CFLAGS := $(CFLAGS) -O0 -g
+LDFLAGS := $(LDFLAGS) --coverage 
+EXTRA_CFLAGS := --coverage
+else
+CPPFLAGS := -DNDEBUG
+CFLAGS := $(CFLAGS) -O3 -flto -march=native
+LDFLAGS := $(LDFLAGS) $(CFLAGS)
+endif
 
-rattle: src/rattle.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) $^ -o $@ $(LDFLAGS)
+CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
+
+# Sources and Dependencies
+# TODO: make runtime.c also depend on headers
+
+SRCS = src/rattle.c
+depend: .depend
+
+.depend: $(SRCS)
+	rm -f ./.depend
+	$(CC) $(CFLAGS) -MM $^ -MF ./.depend
+
+include .depend
+
+# Rules
+rattle.o: $(SRCS)
+	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -c $(SRCS) -o $@
+rattle: rattle.o
+	$(CC) $^ -o $@ $(LDFLAGS)
 
 runtime.o: src/runtime.c
 	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
@@ -26,4 +54,4 @@ tests:
 
 .PHONY: clean
 clean:
-	$(RM) rattle runtime.o
+	$(RM) rattle runtime.o rattle.o
