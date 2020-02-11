@@ -381,12 +381,10 @@ parse_imm_char (const char **input, schptr_t *imm)
 bool
 parse_imm_null (const char **input, schptr_t *imm)
 {
-  if ((*input)[0] == 'n' &&
-      (*input)[1] == 'u' &&
-      (*input)[2] == 'l' &&
-      (*input)[3] == 'l')
+  if ((*input)[0] == '(' &&
+      (*input)[1] == ')')
     {
-      *input += 4;
+      *input += 2;
       *imm = sch_encode_imm_null ();
       return true;
     }
