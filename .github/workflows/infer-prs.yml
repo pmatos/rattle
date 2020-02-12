@@ -35,8 +35,10 @@ jobs:
         infer reportdiff --report-current report-feature.json --report-previous infer-out/report.json
     - name: Check differential
       run: |
+        echo "Introduced errors:"
         cat infer-out/differential/introduced.json
-        test "$(< infer-out/differential/introduced.json)" = '[]'
+    - name: Fail if introduced is non-empty
+      run: test "$(cat infer-out/differential/introduced.json)" = '[]'
     - uses: actions/upload-artifact@master
       if: always()
       with:
