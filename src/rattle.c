@@ -255,6 +255,19 @@ static const schprim_t primitives[] =
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
+///////////////////////////////////////////////////////////////////////
+//
+//  ASM utilities
+//
+//
+///////////////////////////////////////////////////////////////////////
+typedef size_t label_t;
+
+label_t
+gen_new_label (void)
+{
+  const char prefix[] = ".Lrattle";
+  
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -654,6 +667,7 @@ parse_prim (const char **input, schptr_t *sptr)
 void emit_asm_epilogue (FILE *);
 void emit_asm_prologue (FILE *, const char *);
 void emit_asm_imm (FILE *, schptr_t);
+void emit_asm_if (FILE *, schptr_t);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -728,6 +742,9 @@ emit_asm_expr (FILE *f, schptr_t sptr)
         emit_asm_expr (f, node->ptr);
         free_list (lst);
       }
+      break;
+    case SCH_IF:
+      emit_asm_if (f, sptr);
       break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
@@ -837,6 +854,23 @@ emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    movzbl %%al, %%eax\n");
   fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
+}
+
+// Emitting asm for conditional
+void
+emit_asm_if (FILE *f, schptr_t p)
+{
+  schif_t *pif = (schif_t *) p;
+
+  label_t thenl = gen_new_label ();
+  label_t elsel = gen_new_label ();
+
+  emit_asm_expr (f, pif->condition);
+  // TODO still need to emit comparison
+  emit_asm_label (f, thenl);
+  emit_asm_expr (f, pif->thenv);
+  emit_asm_label (f, elsel);
+  emit_asm_expr (f, pif->elsev);
 }
 
 ///////////////////////////////////////////////////////////////////////
