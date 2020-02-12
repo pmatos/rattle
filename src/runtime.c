@@ -74,7 +74,7 @@ print_ptr(schptr_t x)
   else if (sch_imm_null_p (x))
     printf ("()");
   else
-    printf ("#<unknown 0x%08" PRIx64 ">", x);
+    printf ("#<unknown 0x%08" PRIxPTR ">", x);
   printf ("\n");
 }
 
