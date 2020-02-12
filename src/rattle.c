@@ -133,6 +133,60 @@ main (int argc, char *argv[]) {
 
 ///////////////////////////////////////////////////////////////////////
 //
+// Section Error Management
+//
+// Error management - this should be the only section causing
+// the program to exit
+//
+///////////////////////////////////////////////////////////////////////
+
+void
+err_oom (void)
+{
+  fprintf (stderr, "out of memory\n");
+  exit (EXIT_FAILURE);
+}
+
+void
+err_parse (const char *s)
+{
+  fprintf (stderr, "error: cannot parse `%s'\n", s);
+  exit (EXIT_FAILURE);
+}
+
+///////////////////////////////////////////////////////////////////////
+//
+// Section Memory Management
+//
+// Memory management - this should be the only section causing the
+// program to allocate memory
+//
+///////////////////////////////////////////////////////////////////////
+
+// alloc: allocates n bytes of memory and returns a pointer to it
+void *
+alloc (size_t n)
+{
+  void *mem = malloc (n);
+  if (!mem)
+    err_oom ();
+
+  return mem;
+}
+
+// grow: grows region pointed to by ptr to n bytes
+void *
+grow (void *ptr, size_t n)
+{
+  void *mem = realloc (ptr, n);
+  if (!mem)
+    err_oom ();
+
+  return mem;
+}
+
+///////////////////////////////////////////////////////////////////////
+//
 // Section Scheme Values
 //
 //
@@ -145,7 +199,7 @@ typedef uint64_t sch_imm;
 struct schprim;
 typedef void (*prim_emmiter) (FILE *, struct schprim *);
 
-typedef enum { SCH_PRIM, SCH_PTR_LIST } sch_type;
+typedef enum { SCH_PRIM, SCH_PTR_LIST, SCH_IF } sch_type;
 
 typedef struct schprim
 {
@@ -166,6 +220,14 @@ typedef struct schptr_list
   sch_type type;             // Type (always SCH_PTR_LIST
   schptr_list_node_t *node;  // Pointer to first node in list
 } schptr_list_t;
+
+typedef struct schif
+{
+  sch_type type;
+  schptr_t condition; // if conditional
+  schptr_t thenv;     // then value
+  schptr_t elsev;     // else value
+} schif_t;
 
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
@@ -250,19 +312,79 @@ bool parse_imm_bool (const char **, schptr_t *);
 bool parse_imm_null (const char **, schptr_t *);
 bool parse_imm_fixnum (const char **, schptr_t *);
 bool parse_imm_char (const char **, schptr_t *);
+bool parse_if (const char **, schptr_t *);
 
 bool parse_char (const char **, char);
 bool parse_lparen (const char **);
 bool parse_rparen (const char **);
-bool skip_whitespace (const char **input);
+bool parse_whitespace (const char **);
 
 bool
-skip_whitespace (const char **input)
+parse_whitespace (const char **input)
 {
   const char *tmp = *input;
   while (isspace (**input))
     (*input)++;
   return *input != tmp; // return true if whitespace was skipped
+}
+
+bool
+parse_if (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+  // Parses an expression as follows:
+  // (if <expr> <expr> <expr>)
+  if (!parse_lparen (&ptr))
+    return false;
+
+  // skip possible whilespace between lparen and if identifier
+  (void) parse_whitespace (&ptr);
+
+  if (ptr[0] != 'i' || ptr[1] != 'f')
+    return false;
+  ptr += 2;
+
+  // skip whitespace between if identifier and condition
+  (void) parse_whitespace (&ptr);
+
+  schptr_t condition;
+  schptr_t thenv;
+  schptr_t elsev;
+
+  if (!parse_expr (&ptr, &condition))
+    return false;
+
+  // skip whitespace between condition and then-value
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_expr (&ptr, &thenv))
+      return false;
+
+  // skip whitespace between then-value and else-value
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_expr (&ptr, &elsev))
+    return false;
+
+  // skip whitespace between else-value and right paren
+  (void) parse_whitespace (&ptr);
+
+  if (! parse_rparen (&ptr))
+    return false;
+
+  // We parsed all we wanted now, so prepare return value
+  *input = ptr;
+  schif_t *ifv = (schif_t *) alloc (sizeof *ifv);
+  if (!ifv)
+    err_oom ();
+
+  ifv->type = SCH_IF;
+  ifv->condition = condition;
+  ifv->thenv = thenv;
+  ifv->elsev = elsev;
+
+  *sptr = (schptr_t) ifv;
+  return true;
 }
 
 bool
@@ -415,7 +537,7 @@ parse_imm (const char **input, schptr_t *imm)
 }
 
 bool
-skip_char (const char **input, char c)
+parse_char (const char **input, char c)
 {
   if (**input == c)
     {
@@ -426,36 +548,40 @@ skip_char (const char **input, char c)
 }
 
 bool
-skip_lparen (const char **input)
+parse_lparen (const char **input)
 {
-  return skip_char (input, '(');
+  return parse_char (input, '(');
 }
 
 bool
-skip_rparen (const char **input)
+parse_rparen (const char **input)
 {
-  return skip_char (input, ')');
+  return parse_char (input, ')');
 }
 
 bool
 parse_expr (const char **input, schptr_t *sptr)
 {
-  // An expression is an immediate
-  // or an expression that starts with a parenthesis
+  // An expression is:
+  //   * an immediate,
+  //   * a primitive,
+  //   * an if conditional
+  // or a parenthesized expression
 
   if (parse_imm (input, sptr) ||
-      parse_prim (input, sptr))
+      parse_prim (input, sptr) ||
+      parse_if (input, sptr))
     return true;
 
-  if (!skip_lparen (input))
+  if (!parse_lparen (input))
     return false;
 
   // Setup list to keep values parsed inside expression
   schptr_list_node_t *e = NULL;
 
-  while (!skip_rparen (input))
+  while (!parse_rparen (input))
     {
-      skip_whitespace (input);
+      parse_whitespace (input);
 
       schptr_t tmp;
       if (parse_expr (input, &tmp))
@@ -711,61 +837,6 @@ emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    movzbl %%al, %%eax\n");
   fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
-}
-
-
-///////////////////////////////////////////////////////////////////////
-//
-// Section Error Management
-//
-// Error management - this should be the only section causing
-// the program to exit
-//
-///////////////////////////////////////////////////////////////////////
-
-void
-err_oom (void)
-{
-  fprintf (stderr, "out of memory\n");
-  exit (EXIT_FAILURE);
-}
-
-void
-err_parse (const char *s)
-{
-  fprintf (stderr, "error: cannot parse `%s'\n", s);
-  exit (EXIT_FAILURE);
-}
-
-///////////////////////////////////////////////////////////////////////
-//
-// Section Memory Management
-//
-// Memory management - this should be the only section causing the
-// program to allocate memory
-//
-///////////////////////////////////////////////////////////////////////
-
-// alloc: allocates n bytes of memory and returns a pointer to it
-void *
-alloc (size_t n)
-{
-  void *mem = malloc (n);
-  if (!mem)
-    err_oom ();
-
-  return mem;
-}
-
-// grow: grows region pointed to by ptr to n bytes
-void *
-grow (void *ptr, size_t n)
-{
-  void *mem = realloc (ptr, n);
-  if (!mem)
-    err_oom ();
-
-  return mem;
 }
 
 ///////////////////////////////////////////////////////////////////////
