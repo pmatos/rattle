@@ -33,7 +33,7 @@ jobs:
         infer capture --reactive -- make
         infer analyze --reactive --changed-files-index index.txt
         infer reportdiff --report-current report-feature.json --report-previous infer-out/report.json
-        [[ $(< infer-out/differential/introduced.json) == '[]' ]] 
+        test $(< infer-out/differential/introduced.json) == '[]'
     - uses: actions/upload-artifact@master
       if: always()
       with:
