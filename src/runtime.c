@@ -83,3 +83,10 @@ runtime_startup (void)
 {
   print_ptr (scheme_entry ());
 }
+
+int
+main (void)
+{
+  runtime_startup ();
+  return 0;
+}
