@@ -9,6 +9,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Check system width
+      run: |
+        gcc -o sizes scripts/sizes.c
+        ./sizes
     - name: Build
       run: make
     - uses: Bogdanp/setup-racket@v0.5
