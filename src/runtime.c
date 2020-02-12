@@ -17,29 +17,14 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#include "common.h"
+
 // Runtime entry point.
 // The compiler generated code is linked here.
-
-/* all scheme values are of type ptrs */
-typedef uint64_t ptr;
-
-extern ptr scheme_entry (void);
-
-/* define all scheme constants */
-#define boolf    0x2f
-#define boolt    0x6f
-#define null     0x3f
-
-#define ch_mask  0xff
-#define ch_tag   0x0f
-#define ch_shift 8
-
-#define fx_mask  0x03
-#define fx_tag   0x00
-#define fx_shift 2
+extern schptr_t scheme_entry (void);
 
 static void
-print_char (uint64_t code) {
+print_char (char code) {
   switch (code)
     {
     case 0x7:
@@ -76,20 +61,20 @@ print_char (uint64_t code) {
 }
 
 static void
-print_ptr(ptr x)
+print_ptr(schptr_t x)
 {
-  if ((x & fx_mask) == fx_tag)
-    printf ("%" PRIi64, (int64_t) ((uint64_t) x) >> fx_shift);
-  else if ((x & ch_mask) == ch_tag)
-    print_char (((uint64_t) x) >> ch_shift);
-  else if (x == boolf)
+  if (sch_imm_fixnum_p (x))
+    printf ("%" PRIi64, sch_decode_imm_fixnum (x));
+  else if (sch_imm_char_p (x))
+    print_char (sch_decode_imm_char (x));
+  else if (sch_imm_false_p (x))
     printf ("#f");
-  else if (x == boolt)
+  else if (sch_imm_true_p (x))
     printf ("#t");
-  else if (x == null)
+  else if (sch_imm_null_p (x))
     printf ("()");
   else
-    printf ("#<unknown 0x%08" PRIx64 ">", x);
+    printf ("#<unknown 0x%08" PRIxPTR ">", x);
   printf ("\n");
 }
 

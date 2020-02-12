@@ -28,6 +28,8 @@
 #include <sys/wait.h>
 #include <dlfcn.h>
 
+#include "common.h"
+
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
 
@@ -69,10 +71,12 @@ main(int argc, char *argv[]) {
           break;
         case 'c':
           compile_p = true;
-          input = strdup(optarg);
+          assert (false);
+          //input = strdup(optarg);
           break;
         case 'o':
-          output = strdup(optarg);
+          assert (false);
+          //output = strdup(optarg);
           break;
         case 'e':
           evaluate_p = true;
@@ -111,7 +115,7 @@ main(int argc, char *argv[]) {
     }
 
   if (compile_p)
-    compile(input, output);
+      compile(input, output);
 
   return 0;
 }
@@ -122,11 +126,105 @@ main(int argc, char *argv[]) {
 //
 //
 ///////////////////////////////////////////////////////////////////////
-#define FIXNUM_MIN -2305843009213693952LL
-#define FIXNUM_MAX  2305843009213693951LL
 
+// Immediates are just represented by a single 64bit value
 typedef uint64_t sch_imm;
 
+// Primitives
+struct schprim;
+typedef void (*prim_emmiter) (FILE *, struct schprim *);
+
+typedef enum { SCH_PRIM, SCH_PTR_LIST } sch_type;
+
+typedef struct schprim
+{
+  sch_type type;         // Type (always SCH_PRIM)
+  char *name;            // Primitive name
+  unsigned int argcount; // Number of arguments for the primitive
+  prim_emmiter emitter;  // Primitive function emmiter
+} schprim_t;
+
+typedef struct schptr_list_node
+{
+  schptr_t ptr;                  // value in list node
+  struct schptr_list_node *next; // next value in list node
+} schptr_list_node_t;
+
+typedef struct schptr_list
+{
+  sch_type type;             // Type (always SCH_PTR_LIST
+  schptr_list_node_t *node;  // Pointer to first node in list
+} schptr_list_t;
+
+// Primitive emitter prototypes
+void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
+void emit_asm_prim_fxsub1 (FILE *, schprim_t *);
+void emit_asm_prim_fxzerop (FILE *, schprim_t *);
+void emit_asm_prim_char_to_fixnum (FILE *, schprim_t *);
+void emit_asm_prim_fixnum_to_char (FILE *, schprim_t *);
+void emit_asm_prim_nullp (FILE *, schprim_t *);
+void emit_asm_prim_fixnump (FILE *, schprim_t *);
+void emit_asm_prim_booleanp (FILE *, schprim_t *);
+void emit_asm_prim_charp (FILE *, schprim_t *);
+void emit_asm_prim_not (FILE *, schprim_t *);
+
+static const schprim_t primitives[] =
+  { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
+    { SCH_PRIM, "fxsub1", 1, emit_asm_prim_fxsub1 },
+    { SCH_PRIM, "fxzero?", 1, emit_asm_prim_fxzerop },
+    { SCH_PRIM, "char->fixnum", 1, emit_asm_prim_char_to_fixnum },
+    { SCH_PRIM, "fixnum->char", 1, emit_asm_prim_fixnum_to_char },
+    { SCH_PRIM, "null?", 1, emit_asm_prim_nullp },
+    { SCH_PRIM, "not", 1, emit_asm_prim_not },
+    { SCH_PRIM, "fixnum?", 1, emit_asm_prim_fixnump },
+    { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp },
+    { SCH_PRIM, "char?", 1, emit_asm_prim_charp }
+  };
+static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
+
+
+///////////////////////////////////////////////////////////////////////
+//
+//  List utilities
+//
+//
+///////////////////////////////////////////////////////////////////////
+schptr_list_node_t *
+reverse_list (schptr_list_node_t *lst)
+{
+  schptr_list_node_t *curr = NULL;
+  schptr_list_node_t *prev = NULL;
+  schptr_list_node_t *next = NULL;
+  curr = lst;
+
+  while (curr != NULL)
+    {
+      next = curr->next;
+      curr->next = prev;
+      prev = curr;
+      curr = next;
+    }
+
+  return prev;
+}
+
+void
+free_list_nodes (schptr_list_node_t *lst)
+{
+  if (lst)
+    {
+      schptr_list_node_t *n = lst->next;
+      free (lst);
+      free_list_nodes (n);
+    }
+}
+
+void
+free_list (schptr_list_t *lst)
+{
+  free_list_nodes (lst->node);
+  free (lst);
+}
 ///////////////////////////////////////////////////////////////////////
 //
 //  Section Parsing
@@ -134,24 +232,37 @@ typedef uint64_t sch_imm;
 //
 ///////////////////////////////////////////////////////////////////////
 
-char *
-skip_space (char *input)
+bool parse_prim (const char **, schptr_t *);
+bool parse_expr (const char **, schptr_t *);
+bool parse_imm (const char **, schptr_t *);
+bool parse_imm_bool (const char **, schptr_t *);
+bool parse_imm_null (const char **, schptr_t *);
+bool parse_imm_fixnum (const char **, schptr_t *);
+bool parse_imm_char (const char **, schptr_t *);
+
+bool parse_char (const char **, char);
+bool parse_lparen (const char **);
+bool parse_rparen (const char **);
+bool skip_whitespace (const char **input);
+
+bool
+skip_whitespace (const char **input)
 {
-  while (isspace (*input)) input++;
-  return input;
+  const char *tmp = *input;
+  while (isspace (**input))
+    (*input)++;
+  return *input != tmp; // return true if whitespace was skipped
 }
 
 bool
-parse_imm_bool (const char **input, sch_imm *imm)
+parse_imm_bool (const char **input, schptr_t *imm)
 {
+  // TODO: Support #true and #false
   if ((*input)[0] == '#')
     {
       if ((*input)[1] == 't' || (*input)[1] == 'f')
         {
-          // Booleans are represented as:
-          // false: 00101111 (0x2f)
-          // true:  01101111 (0x6f)
-          *imm = ((*input)[1] == 't') ? (sch_imm) 0x6f : (sch_imm) 0x2f;
+          *imm = sch_encode_imm_bool((*input)[1] == 't');
           *input += 2;
           return true;
         }
@@ -161,7 +272,7 @@ parse_imm_bool (const char **input, sch_imm *imm)
 }
 
 bool
-parse_imm_fixnum (const char **input, sch_imm *imm)
+parse_imm_fixnum (const char **input, schptr_t *imm)
 {
   const char *sign  = NULL;
   bool seen_num = false;
@@ -179,22 +290,25 @@ parse_imm_fixnum (const char **input, sch_imm *imm)
       v = (v * 10) + (*ptr - '0');
     }
 
-  if (seen_num && v <= FIXNUM_MAX)
+  if (seen_num)
     {
       int64_t fx =  (int64_t) v;
       if (sign && *sign == '-')
         fx = -v;
 
-      // Fixnums have two bottom bits as 0
-      *imm = (sch_imm) (fx << 2);
-      return true;
+      if (fx >= FX_MIN && fx <= FX_MAX)
+        {
+          *imm = sch_encode_imm_fixnum (fx);
+          *input = ptr;
+          return true;
+        }
     }
 
   return false;
 }
 
 bool
-parse_imm_char (const char **input, sch_imm *imm)
+parse_imm_char (const char **input, schptr_t *imm)
 {
   unsigned char c = 0;
   const char *ptr = *input;
@@ -205,47 +319,47 @@ parse_imm_char (const char **input, sch_imm *imm)
       if (!strncmp (ptr, "alarm", 5))
         {
           c = 0x7;
-          *input += 5;
+          *input += 7;
         }
       else if (!strncmp (ptr, "backspace", 9))
         {
           c = 0x8;
-          *input += 9;
+          *input += 11;
         }
       else if (!strncmp (ptr, "delete", 6))
         {
           c = 0x7f;
-          *input += 6;
+          *input += 8;
         }
       else if (!strncmp (ptr, "escape", 6))
         {
           c = 0x1b;
-          *input += 6;
+          *input += 8;
         }
       else if (!strncmp (ptr, "newline", 7))
         {
           c = 0xa;
-          *input += 7;
+          *input += 9;
         }
       else if (!strncmp (ptr, "null", 4))
         {
           c = 0x0;
-          *input += 4;
+          *input += 6;
         }
       else if (!strncmp (ptr, "return", 6))
         {
           c = 0xd;
-          *input += 6;
+          *input += 8;
         }
       else if (!strncmp (ptr, "space", 5))
         {
           c = (uint64_t)' ';
-          *input += 5;
+          *input += 7;
         }
       else if (!strncmp (ptr, "tab", 3))
         {
           c = 0x9;
-          *input += 3;
+          *input += 5;
         }
       else if (isascii(ptr[2])) // Simple case: #\X where X is ascii
         {
@@ -258,8 +372,7 @@ parse_imm_char (const char **input, sch_imm *imm)
           exit (EXIT_FAILURE);
         }
 
-      // Chars have the lowest byte as 0x0f
-      *imm = (c << 8) | 0x0f;
+      *imm = sch_encode_imm_char (c);
       return true;
     }
 
@@ -267,17 +380,13 @@ parse_imm_char (const char **input, sch_imm *imm)
 }
 
 bool
-parse_imm_null (const char **input, sch_imm *imm)
+parse_imm_null (const char **input, schptr_t *imm)
 {
-  if ((*input)[0] == 'n' &&
-      (*input)[1] == 'u' &&
-      (*input)[2] == 'l' &&
-      (*input)[3] == 'l')
+  if ((*input)[0] == '(' &&
+      (*input)[1] == ')')
     {
-      *input += 4;
-
-      // null is represented as 0x3f
-      *imm = 0x3f;
+      *input += 2;
+      *imm = sch_encode_imm_null ();
       return true;
     }
 
@@ -285,13 +394,107 @@ parse_imm_null (const char **input, sch_imm *imm)
 }
 
 bool
-parse_imm (const char **input, sch_imm *imm)
+parse_imm (const char **input, schptr_t *imm)
 {
   return
   parse_imm_fixnum (input, imm) ||
     parse_imm_bool (input, imm) ||
     parse_imm_null (input, imm) ||
     parse_imm_char (input, imm);
+}
+
+bool
+skip_char (const char **input, char c)
+{
+  if (**input == c)
+    {
+      (*input)++;
+      return true;
+    }
+  return false;
+}
+
+bool
+skip_lparen (const char **input)
+{
+  return skip_char (input, '(');
+}
+
+bool
+skip_rparen (const char **input)
+{
+  return skip_char (input, ')');
+}
+
+bool
+parse_expr (const char **input, schptr_t *sptr)
+{
+  // An expression is an immediate
+  // or an expression that starts with a parenthesis
+
+  if (parse_imm (input, sptr) ||
+      parse_prim (input, sptr))
+    return true;
+
+  if (!skip_lparen (input))
+    return false;
+
+  // Setup list to keep values parsed inside expression
+  schptr_list_node_t *e = NULL;
+
+  while (!skip_rparen (input))
+    {
+      skip_whitespace (input);
+
+      schptr_t tmp;
+      if (parse_expr (input, &tmp))
+        {
+          schptr_list_node_t *node = malloc (sizeof *node);
+          if (!node)
+            {
+              fprintf (stderr, "oom\n");
+              exit (EXIT_FAILURE);
+            }
+
+          node->ptr = tmp;
+          node->next = e;
+          e = node;
+        }
+      else
+        {
+          fprintf (stderr, "error: cannot parse %s\n", *input);
+          exit (EXIT_FAILURE);
+        }
+
+    }
+
+  schptr_list_t *lst = malloc (sizeof *lst);
+  if (!lst)
+    {
+      fprintf (stderr, "oom\n");
+      exit (EXIT_FAILURE);
+    }
+
+  lst->type = SCH_PTR_LIST;
+  lst->node = reverse_list (e);
+  *sptr = (schptr_t) lst;
+  return true;
+}
+
+bool
+parse_prim (const char **input, schptr_t *sptr)
+{
+  for (size_t i = 0; i < primitives_count; i++)
+    {
+      schprim_t prim = primitives[i];
+      if (!strncmp (prim.name, *input, strlen (prim.name)))
+        {
+          *sptr = (schptr_t)(&(primitives[i]));
+          (*input) += strlen (prim.name);
+          return true;
+        }
+    }
+  return false;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -310,6 +513,10 @@ parse_imm (const char **input, sch_imm *imm)
 #else
 #  error "Unsupported platform"
 #endif
+
+void emit_asm_epilogue (FILE *);
+void emit_asm_prologue (FILE *, const char *);
+void emit_asm_imm (FILE *, schptr_t);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -337,12 +544,162 @@ emit_asm_epilogue (FILE *f)
 // EMIT_ASM_IMM
 // Emit assembly for immediates
 void
-emit_asm_imm (FILE *f, sch_imm imm)
+emit_asm_imm (FILE *f, schptr_t imm)
 {
   if (imm > 4294967295)
-    fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", imm);
+    fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", (uint64_t)imm);
   else
-    fprintf (f, "    movl $%" PRIu64 ", %%eax\n", imm);
+    fprintf (f, "    movl $%" PRIu64 ", %%eax\n", (uint64_t)imm);
+}
+
+void
+emit_asm_prim (FILE *f, schptr_t sptr)
+{
+  schprim_t *prim = (schprim_t *)sptr;
+  assert (prim->type == SCH_PRIM);
+
+  prim->emitter (f, prim);
+}
+
+void
+emit_asm_expr (FILE *f, schptr_t sptr)
+{
+  if (sch_imm_p (sptr))
+    {
+      emit_asm_imm (f, sptr);
+      return;
+    }
+
+  assert (sch_ptr_p (sptr));
+
+  sch_type type = *((sch_type *)sptr);
+  switch (type)
+    {
+    case SCH_PRIM:
+      emit_asm_prim (f, sptr);
+      break;
+    case SCH_PTR_LIST:
+      // First emit the value of all the elements 2-end and then the first
+      // This causes all arguments to be evaluates
+      {
+        schptr_list_t *lst = (schptr_list_t *)sptr;
+        schptr_list_node_t *node = lst->node;
+        assert (node); // node is not null, otherwise it would have been parsed as an immediate
+
+        for (const schptr_list_node_t *arg = node->next; arg; arg = arg->next)
+          emit_asm_expr (f, arg->ptr);
+        emit_asm_expr (f, node->ptr);
+        free_list (lst);
+      }
+      break;
+    default:
+      fprintf (stderr, "unknown type 0x%08x\n", type);
+      assert (false); // unreachable
+      break;
+    }
+}
+
+// Primitives Emitter
+void
+emit_asm_prim_fxadd1 (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  const uint64_t cst = UINT64_C(1) << FX_SHIFT;
+  fprintf (f, "    addq $%" PRIu64", %%rax\n", cst);
+}
+
+void
+emit_asm_prim_fxsub1 (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  const uint64_t cst = UINT64_C(1) << FX_SHIFT;
+  fprintf (f, "    subq $%" PRIu64 ", %%rax\n", cst);
+}
+
+void
+emit_asm_prim_fxzerop (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  fprintf (f, "    movl   $%" PRIu64 ", %%edx\n", FALSE_CST);
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FX_TAG);
+  fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", TRUE_CST);
+  fprintf (f, "    cmovne %%rdx, %%rax\n");
+}
+
+void
+emit_asm_prim_char_to_fixnum (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
+}
+
+void
+emit_asm_prim_fixnum_to_char (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", CHAR_TAG);
+}
+
+void
+emit_asm_prim_fixnump (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", FX_MASK);
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FX_TAG);
+  fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    movzbl %%al, %%eax\n");
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
+}
+
+void
+emit_asm_prim_booleanp (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", BOOL_MASK);
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", BOOL_TAG);
+  fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    salq   $%" PRIu8", %%rax\n", BOOL_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
+}
+
+// Not will return #t for #f and #f for anything else,
+// because all values evaluate to #t
+// section 6.3 of r7rs:
+//     "Of all the Scheme values, only#fcounts as false
+//      in condi-tional expressions.  All other Scheme
+//      values, including#t,count as true."
+void
+emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // I *don't* think this one can be optimized by fixing the values
+  fprintf (f, "    movq    $%" PRIu64 ", %%rdx\n", FALSE_CST);
+  fprintf (f, "    cmpq    $%" PRIu64 ", %%rax\n", FALSE_CST);
+  fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", TRUE_CST);
+  fprintf (f, "    cmovne  %%rdx, %%rax\n");
+}
+
+void
+emit_asm_prim_charp (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", CHAR_MASK);
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", CHAR_TAG);
+  fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    movzbl %%al, %%eax\n");
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
+}
+void
+emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
+{
+  // I *don't* think this one can be optimized by fixing the values
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", NULL_CST);
+  fprintf (f, "    sete   %%al\n");
+  fprintf (f, "    movzbl %%al, %%eax\n");
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -354,7 +711,6 @@ emit_asm_imm (FILE *f, sch_imm imm)
 //
 ///////////////////////////////////////////////////////////////////////
 
-
 // Evaluation
 void
 evaluate(const char *cmd)
@@ -365,7 +721,7 @@ evaluate(const char *cmd)
 void
 compile(const char *input, const char *output)
 {
-  (void)input;
+  (void) input;
   (void) output;
   assert(false);
 }
@@ -395,8 +751,8 @@ find_system_tmpdir ()
 void
 compile_expression (const char *e)
 {
-  sch_imm imm = 0;
-  bool parsed = parse_imm (&e, &imm);
+  schptr_t sptr = 0;
+  bool parsed = parse_expr (&e, &sptr);
 
   if (!parsed)
     {
@@ -422,10 +778,15 @@ compile_expression (const char *e)
     }
 
   FILE *i = fdopen (ifd, "w");
+  if (!i)
+    {
+      fprintf (stderr, "cannot open file descriptor for `%s'\n", itemplate);
+      exit (EXIT_FAILURE);
+    }
 
   // write asm file
   emit_asm_prologue (i, "scheme_entry");
-  emit_asm_imm (i, imm);
+  emit_asm_expr (i, sptr);
   emit_asm_epilogue (i);
 
   // close file
@@ -452,7 +813,6 @@ compile_expression (const char *e)
 
   // remove input file and close port
   unlink (itemplate);
-  close (ifd);
 
   // We have compiled the linked library so we are ready to
   // dynamically load the library
