@@ -34,6 +34,8 @@ jobs:
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
     - name: Test primitives
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
+    - name: Test if
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/if.tests
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -64,6 +66,8 @@ jobs:
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
     - name: Test primitives
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
+    - name: Test if
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/if.tests
 
   buildtest-vg:
 
@@ -100,6 +104,8 @@ jobs:
       run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/char.tests
     - name: Test primitives
       run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/primitives.tests
+    - name: Test if
+      run: racket tests/script/test.rkt -c "valgrind -q ./rattle -e --" tests/if.tests
 
   buildtest-ubsan:
 
@@ -135,3 +141,5 @@ jobs:
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
     - name: Test primitives
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
+    - name: Test if
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/if.tests
