@@ -199,7 +199,7 @@ typedef uint64_t sch_imm;
 struct schprim;
 typedef void (*prim_emmiter) (FILE *, schptr_t);
 
-typedef enum { SCH_PRIM, SCH_PTR_LIST, SCH_IF } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_PRIM_EVAL1 } sch_type;
 
 typedef struct schprim
 {
@@ -209,17 +209,12 @@ typedef struct schprim
   prim_emmiter emitter;  // Primitive function emmiter
 } schprim_t;
 
-typedef struct schptr_list_node
+typedef struct schprim_eval1
 {
-  schptr_t ptr;                  // value in list node
-  struct schptr_list_node *next; // next value in list node
-} schptr_list_node_t;
-
-typedef struct schptr_list
-{
-  sch_type type;             // Type (always SCH_PTR_LIST
-  schptr_list_node_t *node;  // Pointer to first node in list
-} schptr_list_t;
+  sch_type type;
+  schprim_t *prim;
+  schptr_t arg1;
+} schprim_eval1_t;
 
 typedef struct schif
 {
@@ -274,54 +269,13 @@ gen_new_temp_label (char *str)
 
 ///////////////////////////////////////////////////////////////////////
 //
-//  List utilities
-//
-//
-///////////////////////////////////////////////////////////////////////
-schptr_list_node_t *
-reverse_list (schptr_list_node_t *lst)
-{
-  schptr_list_node_t *curr = NULL;
-  schptr_list_node_t *prev = NULL;
-  schptr_list_node_t *next = NULL;
-  curr = lst;
-
-  while (curr != NULL)
-    {
-      next = curr->next;
-      curr->next = prev;
-      prev = curr;
-      curr = next;
-    }
-
-  return prev;
-}
-
-void
-free_list_nodes (schptr_list_node_t *lst)
-{
-  if (lst)
-    {
-      schptr_list_node_t *n = lst->next;
-      free (lst);
-      free_list_nodes (n);
-    }
-}
-
-void
-free_list (schptr_list_t *lst)
-{
-  free_list_nodes (lst->node);
-  free (lst);
-}
-///////////////////////////////////////////////////////////////////////
-//
 //  Section Parsing
 //
 //
 ///////////////////////////////////////////////////////////////////////
 
 bool parse_prim (const char **, schptr_t *);
+bool parse_prim1 (const char **, schptr_t *);
 bool parse_expr (const char **, schptr_t *);
 bool parse_imm (const char **, schptr_t *);
 bool parse_imm_bool (const char **, schptr_t *);
@@ -586,52 +540,11 @@ parse_expr (const char **input, schptr_t *sptr)
 
   if (parse_imm (input, sptr) ||
       parse_prim (input, sptr) ||
-      parse_if (input, sptr))
+      parse_if (input, sptr) ||
+      parse_prim1 (input, sptr))
     return true;
 
-  if (!parse_lparen (input))
-    return false;
-
-  // Setup list to keep values parsed inside expression
-  schptr_list_node_t *e = NULL;
-
-  while (!parse_rparen (input))
-    {
-      parse_whitespace (input);
-
-      schptr_t tmp;
-      if (parse_expr (input, &tmp))
-        {
-          schptr_list_node_t *node = malloc (sizeof *node);
-          if (!node)
-            {
-              fprintf (stderr, "oom\n");
-              exit (EXIT_FAILURE);
-            }
-
-          node->ptr = tmp;
-          node->next = e;
-          e = node;
-        }
-      else
-        {
-          fprintf (stderr, "error: cannot parse %s\n", *input);
-          exit (EXIT_FAILURE);
-        }
-
-    }
-
-  schptr_list_t *lst = malloc (sizeof *lst);
-  if (!lst)
-    {
-      fprintf (stderr, "oom\n");
-      exit (EXIT_FAILURE);
-    }
-
-  lst->type = SCH_PTR_LIST;
-  lst->node = reverse_list (e);
-  *sptr = (schptr_t) lst;
-  return true;
+  return false;
 }
 
 bool
@@ -648,6 +561,43 @@ parse_prim (const char **input, schptr_t *sptr)
         }
     }
   return false;
+}
+
+
+bool
+parse_prim1 (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  if (!parse_lparen (&ptr))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  schptr_t prim;
+  schptr_t arg1;
+
+  if (!parse_prim (&ptr, &prim))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_expr (&ptr, &arg1))
+    return false;
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  // All parsed correctly
+  *input = ptr;
+
+  schprim_eval1_t *pe = (schprim_eval1_t *)alloc (sizeof *pe);
+  pe->type = SCH_PRIM_EVAL1;
+  pe->prim = (schprim_t *) prim;
+  pe->arg1 = arg1;
+
+  *sptr = (schptr_t)pe;
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -712,7 +662,7 @@ emit_asm_prim (FILE *f, schptr_t sptr)
   schprim_t *prim = (schprim_t *)sptr;
   assert (prim->type == SCH_PRIM);
 
-  prim->emitter (f, prim);
+  prim->emitter (f, sptr);
 }
 
 void
