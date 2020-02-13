@@ -31,3 +31,5 @@ jobs:
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
     - name: Test primitives
       run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
+    - name: Test if
+      run: racket tests/script/test.rkt -c "./rattle -e --" tests/if.tests

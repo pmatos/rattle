@@ -133,6 +133,60 @@ main (int argc, char *argv[]) {
 
 ///////////////////////////////////////////////////////////////////////
 //
+// Section Error Management
+//
+// Error management - this should be the only section causing
+// the program to exit
+//
+///////////////////////////////////////////////////////////////////////
+
+void
+err_oom (void)
+{
+  fprintf (stderr, "out of memory\n");
+  exit (EXIT_FAILURE);
+}
+
+void
+err_parse (const char *s)
+{
+  fprintf (stderr, "error: cannot parse `%s'\n", s);
+  exit (EXIT_FAILURE);
+}
+
+///////////////////////////////////////////////////////////////////////
+//
+// Section Memory Management
+//
+// Memory management - this should be the only section causing the
+// program to allocate memory
+//
+///////////////////////////////////////////////////////////////////////
+
+// alloc: allocates n bytes of memory and returns a pointer to it
+void *
+alloc (size_t n)
+{
+  void *mem = malloc (n);
+  if (!mem)
+    err_oom ();
+
+  return mem;
+}
+
+// grow: grows region pointed to by ptr to n bytes
+void *
+grow (void *ptr, size_t n)
+{
+  void *mem = realloc (ptr, n);
+  if (!mem)
+    err_oom ();
+
+  return mem;
+}
+
+///////////////////////////////////////////////////////////////////////
+//
 // Section Scheme Values
 //
 //
@@ -143,9 +197,9 @@ typedef uint64_t sch_imm;
 
 // Primitives
 struct schprim;
-typedef void (*prim_emmiter) (FILE *, struct schprim *);
+typedef void (*prim_emmiter) (FILE *, schptr_t);
 
-typedef enum { SCH_PRIM, SCH_PTR_LIST } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_PRIM_EVAL1 } sch_type;
 
 typedef struct schprim
 {
@@ -155,29 +209,33 @@ typedef struct schprim
   prim_emmiter emitter;  // Primitive function emmiter
 } schprim_t;
 
-typedef struct schptr_list_node
+typedef struct schprim_eval1
 {
-  schptr_t ptr;                  // value in list node
-  struct schptr_list_node *next; // next value in list node
-} schptr_list_node_t;
+  sch_type type;
+  schprim_t *prim;
+  schptr_t arg1;
+} schprim_eval1_t;
 
-typedef struct schptr_list
+typedef struct schif
 {
-  sch_type type;             // Type (always SCH_PTR_LIST
-  schptr_list_node_t *node;  // Pointer to first node in list
-} schptr_list_t;
+  sch_type type;
+  schptr_t condition; // if conditional
+  schptr_t thenv;     // then value
+  schptr_t elsev;     // else value
+} schif_t;
 
 // Primitive emitter prototypes
-void emit_asm_prim_fxadd1 (FILE *, schprim_t *);
-void emit_asm_prim_fxsub1 (FILE *, schprim_t *);
-void emit_asm_prim_fxzerop (FILE *, schprim_t *);
-void emit_asm_prim_char_to_fixnum (FILE *, schprim_t *);
-void emit_asm_prim_fixnum_to_char (FILE *, schprim_t *);
-void emit_asm_prim_nullp (FILE *, schprim_t *);
-void emit_asm_prim_fixnump (FILE *, schprim_t *);
-void emit_asm_prim_booleanp (FILE *, schprim_t *);
-void emit_asm_prim_charp (FILE *, schprim_t *);
-void emit_asm_prim_not (FILE *, schprim_t *);
+void emit_asm_prim_fxadd1 (FILE *, schptr_t);
+void emit_asm_prim_fxsub1 (FILE *, schptr_t);
+void emit_asm_prim_fxzerop (FILE *, schptr_t);
+void emit_asm_prim_char_to_fixnum (FILE *, schptr_t);
+void emit_asm_prim_fixnum_to_char (FILE *, schptr_t);
+void emit_asm_prim_nullp (FILE *, schptr_t);
+void emit_asm_prim_fixnump (FILE *, schptr_t);
+void emit_asm_prim_booleanp (FILE *, schptr_t);
+void emit_asm_prim_charp (FILE *, schptr_t);
+void emit_asm_prim_not (FILE *, schptr_t);
+void emit_asm_prim_fxlognot (FILE *, schptr_t);
 
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
@@ -189,53 +247,28 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "not", 1, emit_asm_prim_not },
     { SCH_PRIM, "fixnum?", 1, emit_asm_prim_fixnump },
     { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp },
-    { SCH_PRIM, "char?", 1, emit_asm_prim_charp }
+    { SCH_PRIM, "char?", 1, emit_asm_prim_charp },
+    { SCH_PRIM, "fxlognot", 1, emit_asm_prim_fxlognot }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
-
 ///////////////////////////////////////////////////////////////////////
 //
-//  List utilities
+//  ASM utilities
 //
 //
 ///////////////////////////////////////////////////////////////////////
-schptr_list_node_t *
-reverse_list (schptr_list_node_t *lst)
-{
-  schptr_list_node_t *curr = NULL;
-  schptr_list_node_t *prev = NULL;
-  schptr_list_node_t *next = NULL;
-  curr = lst;
-
-  while (curr != NULL)
-    {
-      next = curr->next;
-      curr->next = prev;
-      prev = curr;
-      curr = next;
-    }
-
-  return prev;
-}
+#define LABEL_MAX 64
 
 void
-free_list_nodes (schptr_list_node_t *lst)
+gen_new_temp_label (char *str)
 {
-  if (lst)
-    {
-      schptr_list_node_t *n = lst->next;
-      free (lst);
-      free_list_nodes (n);
-    }
+  static size_t lcount = 0;
+  const char prefix[] = ".LTrattle";
+
+  sprintf (str, "%s%zu", prefix, lcount++);
 }
 
-void
-free_list (schptr_list_t *lst)
-{
-  free_list_nodes (lst->node);
-  free (lst);
-}
 ///////////////////////////////////////////////////////////////////////
 //
 //  Section Parsing
@@ -244,25 +277,86 @@ free_list (schptr_list_t *lst)
 ///////////////////////////////////////////////////////////////////////
 
 bool parse_prim (const char **, schptr_t *);
+bool parse_prim1 (const char **, schptr_t *);
 bool parse_expr (const char **, schptr_t *);
 bool parse_imm (const char **, schptr_t *);
 bool parse_imm_bool (const char **, schptr_t *);
 bool parse_imm_null (const char **, schptr_t *);
 bool parse_imm_fixnum (const char **, schptr_t *);
 bool parse_imm_char (const char **, schptr_t *);
+bool parse_if (const char **, schptr_t *);
 
 bool parse_char (const char **, char);
 bool parse_lparen (const char **);
 bool parse_rparen (const char **);
-bool skip_whitespace (const char **input);
+bool parse_whitespace (const char **);
 
 bool
-skip_whitespace (const char **input)
+parse_whitespace (const char **input)
 {
   const char *tmp = *input;
   while (isspace (**input))
     (*input)++;
   return *input != tmp; // return true if whitespace was skipped
+}
+
+bool
+parse_if (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+  // Parses an expression as follows:
+  // (if <expr> <expr> <expr>)
+  if (!parse_lparen (&ptr))
+    return false;
+
+  // skip possible whilespace between lparen and if identifier
+  (void) parse_whitespace (&ptr);
+
+  if (ptr[0] != 'i' || ptr[1] != 'f')
+    return false;
+  ptr += 2;
+
+  // skip whitespace between if identifier and condition
+  (void) parse_whitespace (&ptr);
+
+  schptr_t condition;
+  schptr_t thenv;
+  schptr_t elsev;
+
+  if (!parse_expr (&ptr, &condition))
+    return false;
+
+  // skip whitespace between condition and then-value
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_expr (&ptr, &thenv))
+      return false;
+
+  // skip whitespace between then-value and else-value
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_expr (&ptr, &elsev))
+    return false;
+
+  // skip whitespace between else-value and right paren
+  (void) parse_whitespace (&ptr);
+
+  if (! parse_rparen (&ptr))
+    return false;
+
+  // We parsed all we wanted now, so prepare return value
+  *input = ptr;
+  schif_t *ifv = (schif_t *) alloc (sizeof *ifv);
+  if (!ifv)
+    err_oom ();
+
+  ifv->type = SCH_IF;
+  ifv->condition = condition;
+  ifv->thenv = thenv;
+  ifv->elsev = elsev;
+
+  *sptr = (schptr_t) ifv;
+  return true;
 }
 
 bool
@@ -415,7 +509,7 @@ parse_imm (const char **input, schptr_t *imm)
 }
 
 bool
-skip_char (const char **input, char c)
+parse_char (const char **input, char c)
 {
   if (**input == c)
     {
@@ -426,70 +520,33 @@ skip_char (const char **input, char c)
 }
 
 bool
-skip_lparen (const char **input)
+parse_lparen (const char **input)
 {
-  return skip_char (input, '(');
+  return parse_char (input, '(');
 }
 
 bool
-skip_rparen (const char **input)
+parse_rparen (const char **input)
 {
-  return skip_char (input, ')');
+  return parse_char (input, ')');
 }
 
 bool
 parse_expr (const char **input, schptr_t *sptr)
 {
-  // An expression is an immediate
-  // or an expression that starts with a parenthesis
+  // An expression is:
+  //   * an immediate,
+  //   * a primitive,
+  //   * an if conditional
+  // or a parenthesized expression
 
   if (parse_imm (input, sptr) ||
-      parse_prim (input, sptr))
+      parse_prim (input, sptr) ||
+      parse_if (input, sptr) ||
+      parse_prim1 (input, sptr))
     return true;
 
-  if (!skip_lparen (input))
-    return false;
-
-  // Setup list to keep values parsed inside expression
-  schptr_list_node_t *e = NULL;
-
-  while (!skip_rparen (input))
-    {
-      skip_whitespace (input);
-
-      schptr_t tmp;
-      if (parse_expr (input, &tmp))
-        {
-          schptr_list_node_t *node = malloc (sizeof *node);
-          if (!node)
-            {
-              fprintf (stderr, "oom\n");
-              exit (EXIT_FAILURE);
-            }
-
-          node->ptr = tmp;
-          node->next = e;
-          e = node;
-        }
-      else
-        {
-          fprintf (stderr, "error: cannot parse %s\n", *input);
-          exit (EXIT_FAILURE);
-        }
-
-    }
-
-  schptr_list_t *lst = malloc (sizeof *lst);
-  if (!lst)
-    {
-      fprintf (stderr, "oom\n");
-      exit (EXIT_FAILURE);
-    }
-
-  lst->type = SCH_PTR_LIST;
-  lst->node = reverse_list (e);
-  *sptr = (schptr_t) lst;
-  return true;
+  return false;
 }
 
 bool
@@ -506,6 +563,43 @@ parse_prim (const char **input, schptr_t *sptr)
         }
     }
   return false;
+}
+
+
+bool
+parse_prim1 (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  if (!parse_lparen (&ptr))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  schptr_t prim;
+  schptr_t arg1;
+
+  if (!parse_prim (&ptr, &prim))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_expr (&ptr, &arg1))
+    return false;
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  // All parsed correctly
+  *input = ptr;
+
+  schprim_eval1_t *pe = (schprim_eval1_t *)alloc (sizeof *pe);
+  pe->type = SCH_PRIM_EVAL1;
+  pe->prim = (schprim_t *) prim;
+  pe->arg1 = arg1;
+
+  *sptr = (schptr_t)pe;
+  return true;
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -528,6 +622,7 @@ parse_prim (const char **input, schptr_t *sptr)
 void emit_asm_epilogue (FILE *);
 void emit_asm_prologue (FILE *, const char *);
 void emit_asm_imm (FILE *, schptr_t);
+void emit_asm_if (FILE *, schptr_t);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -564,12 +659,12 @@ emit_asm_imm (FILE *f, schptr_t imm)
 }
 
 void
-emit_asm_prim (FILE *f, schptr_t sptr)
+emit_asm_prim1 (FILE *f, schptr_t sptr)
 {
-  schprim_t *prim = (schprim_t *)sptr;
-  assert (prim->type == SCH_PRIM);
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
 
-  prim->emitter (f, prim);
+  pe->prim->emitter (f, pe->arg1);
 }
 
 void
@@ -587,21 +682,14 @@ emit_asm_expr (FILE *f, schptr_t sptr)
   switch (type)
     {
     case SCH_PRIM:
-      emit_asm_prim (f, sptr);
+      fprintf (stderr, "cannot emit singleton primitive types\n");
+      exit (EXIT_FAILURE);
       break;
-    case SCH_PTR_LIST:
-      // First emit the value of all the elements 2-end and then the first
-      // This causes all arguments to be evaluates
-      {
-        schptr_list_t *lst = (schptr_list_t *)sptr;
-        schptr_list_node_t *node = lst->node;
-        assert (node); // node is not null, otherwise it would have been parsed as an immediate
-
-        for (const schptr_list_node_t *arg = node->next; arg; arg = arg->next)
-          emit_asm_expr (f, arg->ptr);
-        emit_asm_expr (f, node->ptr);
-        free_list (lst);
-      }
+    case SCH_PRIM_EVAL1:
+      emit_asm_prim1 (f, sptr);
+      break;
+    case SCH_IF:
+      emit_asm_if (f, sptr);
       break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
@@ -612,22 +700,28 @@ emit_asm_expr (FILE *f, schptr_t sptr)
 
 // Primitives Emitter
 void
-emit_asm_prim_fxadd1 (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   const uint64_t cst = UINT64_C(1) << FX_SHIFT;
   fprintf (f, "    addq $%" PRIu64", %%rax\n", cst);
 }
 
 void
-emit_asm_prim_fxsub1 (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   const uint64_t cst = UINT64_C(1) << FX_SHIFT;
   fprintf (f, "    subq $%" PRIu64 ", %%rax\n", cst);
 }
 
 void
-emit_asm_prim_fxzerop (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_fxzerop (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   fprintf (f, "    movl   $%" PRIu64 ", %%edx\n", FALSE_CST);
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FX_TAG);
   fprintf (f, "    movabsq $%" PRIu64 ", %%rax\n", TRUE_CST);
@@ -635,8 +729,10 @@ emit_asm_prim_fxzerop (FILE *f, schprim_t *p __attribute__((unused)))
 }
 
 void
-emit_asm_prim_char_to_fixnum (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
   fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
@@ -644,8 +740,10 @@ emit_asm_prim_char_to_fixnum (FILE *f, schprim_t *p __attribute__((unused)))
 }
 
 void
-emit_asm_prim_fixnum_to_char (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
@@ -653,8 +751,10 @@ emit_asm_prim_fixnum_to_char (FILE *f, schprim_t *p __attribute__((unused)))
 }
 
 void
-emit_asm_prim_fixnump (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_fixnump (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", FX_MASK);
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FX_TAG);
@@ -665,8 +765,10 @@ emit_asm_prim_fixnump (FILE *f, schprim_t *p __attribute__((unused)))
 }
 
 void
-emit_asm_prim_booleanp (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_booleanp (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", BOOL_MASK);
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", BOOL_TAG);
@@ -682,8 +784,10 @@ emit_asm_prim_booleanp (FILE *f, schprim_t *p __attribute__((unused)))
 //      in condi-tional expressions.  All other Scheme
 //      values, including#t,count as true."
 void
-emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_not (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   // I *don't* think this one can be optimized by fixing the values
   fprintf (f, "    movq    $%" PRIu64 ", %%rdx\n", FALSE_CST);
   fprintf (f, "    cmpq    $%" PRIu64 ", %%rax\n", FALSE_CST);
@@ -692,8 +796,10 @@ emit_asm_prim_not (FILE *f, schprim_t *p __attribute__((unused)))
 }
 
 void
-emit_asm_prim_charp (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_charp (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", CHAR_MASK);
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", CHAR_TAG);
@@ -703,8 +809,10 @@ emit_asm_prim_charp (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 void
-emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
+emit_asm_prim_nullp (FILE *f, schptr_t sptr)
 {
+  emit_asm_expr (f, sptr);
+
   // I *don't* think this one can be optimized by fixing the values
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", NULL_CST);
   fprintf (f, "    sete   %%al\n");
@@ -713,59 +821,45 @@ emit_asm_prim_nullp (FILE *f, schprim_t *p __attribute__((unused)))
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
-
-///////////////////////////////////////////////////////////////////////
-//
-// Section Error Management
-//
-// Error management - this should be the only section causing
-// the program to exit
-//
-///////////////////////////////////////////////////////////////////////
-
-void
-err_oom (void)
+void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr)
 {
-  fprintf (stderr, "out of memory\n");
-  exit (EXIT_FAILURE);
+  emit_asm_expr (f, sptr);
+
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    notq   %%rax\n");
+  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", ~FX_MASK);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
 }
 
 void
-err_parse (const char *s)
+emit_asm_label (FILE *f, char *label)
 {
-  fprintf (stderr, "error: cannot parse `%s'\n", s);
-  exit (EXIT_FAILURE);
+  fprintf (f, "%s:\n", label);
 }
 
-///////////////////////////////////////////////////////////////////////
-//
-// Section Memory Management
-//
-// Memory management - this should be the only section causing the
-// program to allocate memory
-//
-///////////////////////////////////////////////////////////////////////
-
-// alloc: allocates n bytes of memory and returns a pointer to it
-void *
-alloc (size_t n)
+// Emitting asm for conditional
+void
+emit_asm_if (FILE *f, schptr_t p)
 {
-  void *mem = malloc (n);
-  if (!mem)
-    err_oom ();
+  schif_t *pif = (schif_t *) p;
 
-  return mem;
-}
+  char elsel[LABEL_MAX];
+  gen_new_temp_label (elsel);
 
-// grow: grows region pointed to by ptr to n bytes
-void *
-grow (void *ptr, size_t n)
-{
-  void *mem = realloc (ptr, n);
-  if (!mem)
-    err_oom ();
+  char endl[LABEL_MAX];
+  gen_new_temp_label (endl);
 
-  return mem;
+
+  emit_asm_expr (f, pif->condition);
+
+  // Check if boolean value is true of false and jump accordingly
+  fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FALSE_CST);
+  fprintf (f, "    je     %s\n", elsel);
+  emit_asm_expr (f, pif->thenv);
+  fprintf (f, "    jmp    %s\n", endl);
+  emit_asm_label (f, elsel);
+  emit_asm_expr (f, pif->elsev);
+  emit_asm_label (f, endl);
 }
 
 ///////////////////////////////////////////////////////////////////////

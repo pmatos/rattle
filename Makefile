@@ -56,6 +56,7 @@ tests:
 	racket tests/script/test.rkt -c "./rattle -e --" tests/boolean.tests
 	racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
 	racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
+	racket tests/script/test.rkt -c "./rattle -e --" tests/if.tests
 	./rattle -o fx1 -c tests/fx1.rl && test `./fx1` = "1"
 	./rattle -o fxadd1 -c tests/fxadd1.rl && test `./fxadd1` = "190"
 	./rattle -o primitives-1 -c tests/primitives-1.rl && test `./primitives-1` = "#f"
