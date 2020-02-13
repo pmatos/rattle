@@ -187,3 +187,17 @@
 (not (fixnum? 15)) => #f
 --
 (not (fixnum? #f)) => #t
+--
+(fxlognot 0) => -1
+--
+(fxlognot -1) => 0
+--
+(fxlognot 1) => -2
+--
+(fxlognot -2) => 1
+--
+(fxlognot 536870911) => -536870912
+--
+(fxlognot -536870912) => 536870911
+--
+(fxlognot (fxlognot 237463)) => 237463

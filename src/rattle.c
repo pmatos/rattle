@@ -235,6 +235,7 @@ void emit_asm_prim_fixnump (FILE *, schptr_t);
 void emit_asm_prim_booleanp (FILE *, schptr_t);
 void emit_asm_prim_charp (FILE *, schptr_t);
 void emit_asm_prim_not (FILE *, schptr_t);
+void emit_asm_prim_fxlognot (FILE *, schptr_t);
 
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
@@ -246,7 +247,8 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "not", 1, emit_asm_prim_not },
     { SCH_PRIM, "fixnum?", 1, emit_asm_prim_fixnump },
     { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp },
-    { SCH_PRIM, "char?", 1, emit_asm_prim_charp }
+    { SCH_PRIM, "char?", 1, emit_asm_prim_charp },
+    { SCH_PRIM, "fxlognot", 1, emit_asm_prim_fxlognot }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
@@ -657,12 +659,12 @@ emit_asm_imm (FILE *f, schptr_t imm)
 }
 
 void
-emit_asm_prim (FILE *f, schptr_t sptr)
+emit_asm_prim1 (FILE *f, schptr_t sptr)
 {
-  schprim_t *prim = (schprim_t *)sptr;
-  assert (prim->type == SCH_PRIM);
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
 
-  prim->emitter (f, sptr);
+  pe->prim->emitter (f, pe->arg1);
 }
 
 void
@@ -680,21 +682,11 @@ emit_asm_expr (FILE *f, schptr_t sptr)
   switch (type)
     {
     case SCH_PRIM:
-      emit_asm_prim (f, sptr);
+      fprintf (stderr, "cannot emit singleton primitive types\n");
+      exit (EXIT_FAILURE);
       break;
-    case SCH_PTR_LIST:
-      // First emit the value of all the elements 2-end and then the first
-      // This causes all arguments to be evaluates
-      {
-        schptr_list_t *lst = (schptr_list_t *)sptr;
-        schptr_list_node_t *node = lst->node;
-        assert (node); // node is not null, otherwise it would have been parsed as an immediate
-
-        for (const schptr_list_node_t *arg = node->next; arg; arg = arg->next)
-          emit_asm_expr (f, arg->ptr);
-        emit_asm_expr (f, node->ptr);
-        free_list (lst);
-      }
+    case SCH_PRIM_EVAL1:
+      emit_asm_prim1 (f, sptr);
       break;
     case SCH_IF:
       emit_asm_if (f, sptr);
@@ -829,6 +821,16 @@ emit_asm_prim_nullp (FILE *f, schptr_t sptr)
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
+void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr)
+{
+  emit_asm_expr (f, sptr);
+
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    notq   %%rax\n");
+  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", ~FX_MASK);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
+}
+
 void
 emit_asm_label (FILE *f, char *label)
 {
@@ -840,17 +842,24 @@ void
 emit_asm_if (FILE *f, schptr_t p)
 {
   schif_t *pif = (schif_t *) p;
+
   char elsel[LABEL_MAX];
   gen_new_temp_label (elsel);
+
+  char endl[LABEL_MAX];
+  gen_new_temp_label (endl);
+
 
   emit_asm_expr (f, pif->condition);
 
   // Check if boolean value is true of false and jump accordingly
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FALSE_CST);
-  fprintf (f, "    je     %s", elsel);
+  fprintf (f, "    je     %s\n", elsel);
   emit_asm_expr (f, pif->thenv);
+  fprintf (f, "    jmp    %s\n", endl);
   emit_asm_label (f, elsel);
   emit_asm_expr (f, pif->elsev);
+  emit_asm_label (f, endl);
 }
 
 ///////////////////////////////////////////////////////////////////////
