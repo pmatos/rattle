@@ -16,12 +16,16 @@
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <stdlib.h>
+#include <limits.h>
 
 #include "common.h"
 
 // Runtime entry point.
 // The compiler generated code is linked here.
-extern schptr_t scheme_entry (void);
+extern schptr_t scheme_entry (uint8_t *);
 
 static void
 print_char (char code) {
@@ -78,10 +82,58 @@ print_ptr(schptr_t x)
   printf ("\n");
 }
 
+static uint8_t *
+allocate_protected_space (size_t size)
+{
+  int page = getpagesize ();
+  int status = 0;
+  int aligned_size = ((size + page - 1) / page) * page;
+
+  uint8_t *p = mmap (NULL, aligned_size + 2 * page,
+                     PROT_READ | PROT_WRITE,
+                     MAP_ANONYMOUS | MAP_PRIVATE,
+                     0, 0);
+  if (p == MAP_FAILED)
+    {
+      fprintf (stderr, "failed to allocate stack space of size `%zu'\n", size);
+      exit (EXIT_FAILURE);
+    }
+
+  status = mprotect (p, page, PROT_NONE);
+  if (status != 0)
+    {
+      fprintf (stderr, "failed to protect stack space of size `%zu'\n", size);
+      exit (EXIT_FAILURE);
+    }
+
+  status = mprotect (p + page + aligned_size, page, PROT_NONE);
+  if (status != 0)
+    {
+      fprintf (stderr, "failed to protect stack space of size `%zu'\n", size);
+      exit (EXIT_FAILURE);
+    }
+
+  return p + page;
+}
+
+static void
+deallocate_protected_space (uint8_t *p, size_t size)
+{
+  int page = getpagesize ();
+  int aligned_size = ((size + page - 1) / page) * page;
+  int status = munmap (p - page, aligned_size + 2 * page);
+  if (status)
+    fprintf (stderr, "warning: failed to deallocate stack space of size `%zu'\n", size);
+}
+
 void
 runtime_startup (void)
 {
-  print_ptr (scheme_entry ());
+  size_t stack_size = (16 * 1024 * (WORD_BIT / sizeof(char))); // 16K words of space in stack
+  uint8_t *stack_top = allocate_protected_space (stack_size);
+  uint8_t *stack_base = stack_top + stack_size;
+  print_ptr (scheme_entry (stack_base));
+  deallocate_protected_space (stack_top, stack_size);
 }
 
 int
