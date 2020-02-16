@@ -590,8 +590,8 @@ parse_prim (const char **input, schptr_t *sptr)
 bool
 parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
 {
-  static const size_t maxargs = 2;
-  assert (nargs <= maxargs);
+#define PRIM_MAX_ARGS 2
+  assert (nargs <= PRIM_MAX_ARGS);
   const char *ptr = *input;
 
   if (!parse_lparen (&ptr))
@@ -601,7 +601,7 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
 
   schptr_t prim;
   // infer: initialization here shuts it up
-  schptr_t args[maxargs] = {0};
+  schptr_t args[PRIM_MAX_ARGS] = {0};
 
   if (!parse_prim (&ptr, &prim))
     return false;
@@ -647,6 +647,7 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
     }
 
   return true;
+#undef PRIM_MAX_ARGS
 }
 
 bool
