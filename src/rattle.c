@@ -250,6 +250,8 @@ void emit_asm_prim_not (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxlognot (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxadd (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxsub (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxlogand (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxlogor (FILE *, schptr_t, size_t);
 
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
@@ -264,7 +266,9 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "char?", 1, emit_asm_prim_charp },
     { SCH_PRIM, "fxlognot", 1, emit_asm_prim_fxlognot },
     { SCH_PRIM, "fx+", 2, emit_asm_prim_fxadd },
-    { SCH_PRIM, "fx-", 2, emit_asm_prim_fxsub }
+    { SCH_PRIM, "fx-", 2, emit_asm_prim_fxsub },
+    { SCH_PRIM, "fxlogand", 2, emit_asm_prim_fxlogand },
+    { SCH_PRIM, "fxlogor", 2, emit_asm_prim_fxlogor }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
@@ -895,7 +899,8 @@ emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
-void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si)
+void
+emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
@@ -907,7 +912,8 @@ void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
 }
 
-void emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si)
+void
+emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
@@ -922,7 +928,8 @@ void emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    addq   -%zu(%%rsp), %%rax\n", si);
 }
 
-void emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
+void
+emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
@@ -935,6 +942,36 @@ void emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
   schptr_t arg2 = pe->arg2;
   emit_asm_expr (f, arg2, si + WORD_BYTES);
   fprintf (f, "    subq   -%zu(%%rsp), %%rax\n", si);
+}
+
+void
+emit_asm_prim_fxlogand (FILE *f, schptr_t sptr, size_t si)
+{
+  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL2);
+
+  schptr_t arg1 = pe->arg1;
+  emit_asm_expr (f, arg1, si);
+  fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
+
+  schptr_t arg2 = pe->arg2;
+  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  fprintf (f, "    andq   -%zu(%%rsp), %%rax\n", si);
+}
+
+void
+emit_asm_prim_fxlogor (FILE *f, schptr_t sptr, size_t si)
+{
+  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL2);
+
+  schptr_t arg1 = pe->arg1;
+  emit_asm_expr (f, arg1, si);
+  fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
+
+  schptr_t arg2 = pe->arg2;
+  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  fprintf (f, "    orq   -%zu(%%rsp), %%rax\n", si);
 }
 
 void
