@@ -596,7 +596,8 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
   (void) parse_whitespace (&ptr);
 
   schptr_t prim;
-  schptr_t args[maxargs];
+  // infer: initialization here shuts it up
+  schptr_t args[maxargs] = {0};
 
   if (!parse_prim (&ptr, &prim))
     return false;
