@@ -82,14 +82,47 @@ print_ptr(schptr_t x)
   printf ("\n");
 }
 
+
+// Stack size in words (enough for 16K words)
+#define WORD_STACK_SIZE (16 * 1024)
+
+/*
+  | ...                      |
+  +--------------------------+
+  | Protected Page           |
+  +--------------------------+
+  |                          |
+  |                          |
+  |                          |
+  |                          |
+  +--------------------------+
+  |                          |
+  +--------------------------+ /.\
+  |                          |  |
+  +--------------------------+  | stack grows up
+  |                          |  |
+  +--------------------------+
+  |                          | - Stack bottom
+  +--------------------------+
+  | Protected Page           |
+  +--------------------------+
+  | ...                      |
+
+    We allocate for use a stack with size bytes of size, aligned to a page size.
+    However, in reality we allocate 2 more pages, and we protect them so that we
+    get a segmentation fault if we try to access them by mistake.
+ */
 static uint8_t *
 allocate_protected_space (size_t size)
 {
-  int page = getpagesize ();
+  int pagesize = sysconf (_SC_PAGESIZE);
   int status = 0;
-  int aligned_size = ((size + page - 1) / page) * page;
 
-  uint8_t *p = mmap (NULL, aligned_size + 2 * page,
+  // this is the requested size aligned to a page
+  size_t aligned_size = ((size + pagesize - 1) / pagesize) * pagesize;
+
+  // next (aligned_size + 2 * pagesize) adds the two pages we want to use for protection
+  uint8_t *p = mmap (NULL, aligned_size + (2 * pagesize),
                      PROT_READ | PROT_WRITE,
                      MAP_ANONYMOUS | MAP_PRIVATE,
                      0, 0);
@@ -99,29 +132,32 @@ allocate_protected_space (size_t size)
       exit (EXIT_FAILURE);
     }
 
-  status = mprotect (p, page, PROT_NONE);
+  // Protect bottom page
+  status = mprotect (p, pagesize, PROT_NONE);
   if (status != 0)
     {
       fprintf (stderr, "failed to protect stack space of size `%zu'\n", size);
       exit (EXIT_FAILURE);
     }
 
-  status = mprotect (p + page + aligned_size, page, PROT_NONE);
+  // Protect top page
+  status = mprotect (p + pagesize + aligned_size, pagesize, PROT_NONE);
   if (status != 0)
     {
       fprintf (stderr, "failed to protect stack space of size `%zu'\n", size);
       exit (EXIT_FAILURE);
     }
 
-  return p + page;
+  // Return for use the bottom usable page for the stack
+  return p + pagesize;
 }
 
 static void
 deallocate_protected_space (uint8_t *p, size_t size)
 {
-  int page = getpagesize ();
+  int page = sysconf (_SC_PAGESIZE);
   int aligned_size = ((size + page - 1) / page) * page;
-  int status = munmap (p - page, aligned_size + 2 * page);
+  int status = munmap (p - page, aligned_size + (2 * page));
   if (status)
     fprintf (stderr, "warning: failed to deallocate stack space of size `%zu'\n", size);
 }
@@ -129,7 +165,7 @@ deallocate_protected_space (uint8_t *p, size_t size)
 void
 runtime_startup (void)
 {
-  size_t stack_size = (16 * 1024 * (WORD_BIT / sizeof(char))); // 16K words of space in stack
+  size_t stack_size = (WORD_STACK_SIZE * WORD_BYTES); // 16K words of space in stack
   uint8_t *stack_top = allocate_protected_space (stack_size);
   uint8_t *stack_base = stack_top + stack_size;
   print_ptr (scheme_entry (stack_base));

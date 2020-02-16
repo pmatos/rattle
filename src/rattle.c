@@ -197,9 +197,9 @@ typedef uint64_t sch_imm;
 
 // Primitives
 struct schprim;
-typedef void (*prim_emmiter) (FILE *, schptr_t);
+typedef void (*prim_emmiter) (FILE *, schptr_t, size_t);
 
-typedef enum { SCH_PRIM, SCH_IF, SCH_PRIM_EVAL1 } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
 
 typedef struct schprim
 {
@@ -216,6 +216,14 @@ typedef struct schprim_eval1
   schptr_t arg1;
 } schprim_eval1_t;
 
+typedef struct schprim_eval2
+{
+  sch_type type;
+  schprim_t *prim;
+  schptr_t arg1;
+  schptr_t arg2;
+} schprim_eval2_t;
+
 typedef struct schif
 {
   sch_type type;
@@ -225,17 +233,18 @@ typedef struct schif
 } schif_t;
 
 // Primitive emitter prototypes
-void emit_asm_prim_fxadd1 (FILE *, schptr_t);
-void emit_asm_prim_fxsub1 (FILE *, schptr_t);
-void emit_asm_prim_fxzerop (FILE *, schptr_t);
-void emit_asm_prim_char_to_fixnum (FILE *, schptr_t);
-void emit_asm_prim_fixnum_to_char (FILE *, schptr_t);
-void emit_asm_prim_nullp (FILE *, schptr_t);
-void emit_asm_prim_fixnump (FILE *, schptr_t);
-void emit_asm_prim_booleanp (FILE *, schptr_t);
-void emit_asm_prim_charp (FILE *, schptr_t);
-void emit_asm_prim_not (FILE *, schptr_t);
-void emit_asm_prim_fxlognot (FILE *, schptr_t);
+void emit_asm_prim_fxadd1 (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxsub1 (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxzerop (FILE *, schptr_t, size_t);
+void emit_asm_prim_char_to_fixnum (FILE *, schptr_t, size_t);
+void emit_asm_prim_fixnum_to_char (FILE *, schptr_t, size_t);
+void emit_asm_prim_nullp (FILE *, schptr_t, size_t);
+void emit_asm_prim_fixnump (FILE *, schptr_t, size_t);
+void emit_asm_prim_booleanp (FILE *, schptr_t, size_t);
+void emit_asm_prim_charp (FILE *, schptr_t, size_t);
+void emit_asm_prim_not (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxlognot (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxplus (FILE *, schptr_t, size_t);
 
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
@@ -248,7 +257,8 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "fixnum?", 1, emit_asm_prim_fixnump },
     { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp },
     { SCH_PRIM, "char?", 1, emit_asm_prim_charp },
-    { SCH_PRIM, "fxlognot", 1, emit_asm_prim_fxlognot }
+    { SCH_PRIM, "fxlognot", 1, emit_asm_prim_fxlognot },
+    { SCH_PRIM, "fx+", 2, emit_asm_prim_fxplus }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
@@ -565,10 +575,11 @@ parse_prim (const char **input, schptr_t *sptr)
   return false;
 }
 
-
 bool
-parse_prim1 (const char **input, schptr_t *sptr)
+parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
 {
+  static const size_t maxargs = 2;
+  assert (nargs <= maxargs);
   const char *ptr = *input;
 
   if (!parse_lparen (&ptr))
@@ -577,15 +588,18 @@ parse_prim1 (const char **input, schptr_t *sptr)
   (void) parse_whitespace (&ptr);
 
   schptr_t prim;
-  schptr_t arg1;
+  schptr_t args[maxargs];
 
   if (!parse_prim (&ptr, &prim))
     return false;
 
-  (void) parse_whitespace (&ptr);
+  for (size_t i = 0; i < nargs; i++)
+    {
+      (void) parse_whitespace (&ptr);
 
-  if (!parse_expr (&ptr, &arg1))
-    return false;
+      if (!parse_expr (&ptr, &args[i]))
+        return false;
+    }
 
   if (!parse_rparen (&ptr))
     return false;
@@ -593,13 +607,38 @@ parse_prim1 (const char **input, schptr_t *sptr)
   // All parsed correctly
   *input = ptr;
 
-  schprim_eval1_t *pe = (schprim_eval1_t *)alloc (sizeof *pe);
-  pe->type = SCH_PRIM_EVAL1;
-  pe->prim = (schprim_t *) prim;
-  pe->arg1 = arg1;
+  switch (nargs)
+    {
+    case 1:
+      {
+        schprim_eval1_t *pe = (schprim_eval1_t *)alloc (sizeof *pe);
+        pe->type = SCH_PRIM_EVAL1;
+        pe->prim = (schprim_t *) prim;
+        pe->arg1 = args[0];
+        *sptr = (schptr_t)pe;
+      }
+      break;
+    case 2:
+      {
+        schprim_eval2_t *pe = (schprim_eval2_t *)alloc (sizeof *pe);
+        pe->type = SCH_PRIM_EVAL2;
+        pe->prim = (schprim_t *) prim;
+        pe->arg1 = args[0];
+        pe->arg2 = args[1];
+        *sptr = (schptr_t)pe;
+      }
+    default:
+      assert (false); // unreachable
+      break;
+    }
 
-  *sptr = (schptr_t)pe;
   return true;
+}
+
+bool
+parse_prim1 (const char **input, schptr_t *sptr)
+{
+  return parse_prim_generic (input, 1, sptr);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -658,13 +697,16 @@ emit_asm_imm (FILE *f, schptr_t imm)
     fprintf (f, "    movl $%" PRIu64 ", %%eax\n", (uint64_t)imm);
 }
 
-void
-emit_asm_prim1 (FILE *f, schptr_t sptr)
+#define emit_asm_prim(f, sptr, si)              \
+  _Generic((sptr),                              \
+  schprim_eval1_t: emit_asm_prim1,              \
+  schprim_eval2_t: emit_asm_prim2) (f, sptr, si)
+
+emit_asm_prim1 (FILE *f, schptr_t sptr, size_t si)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-
-  pe->prim->emitter (f, pe->arg1);
+  pe->prim->emitter (f, sptr, si);
 }
 
 void
@@ -686,7 +728,8 @@ emit_asm_expr (FILE *f, schptr_t sptr)
       exit (EXIT_FAILURE);
       break;
     case SCH_PRIM_EVAL1:
-      emit_asm_prim1 (f, sptr);
+    case SCH_PRIM_EVAL2:
+      emit_asm_prim (f, sptr);
       break;
     case SCH_IF:
       emit_asm_if (f, sptr);
@@ -700,7 +743,7 @@ emit_asm_expr (FILE *f, schptr_t sptr)
 
 // Primitives Emitter
 void
-emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr)
+emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -709,7 +752,7 @@ emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr)
 }
 
 void
-emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr)
+emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -718,7 +761,7 @@ emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr)
 }
 
 void
-emit_asm_prim_fxzerop (FILE *f, schptr_t sptr)
+emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -729,7 +772,7 @@ emit_asm_prim_fxzerop (FILE *f, schptr_t sptr)
 }
 
 void
-emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr)
+emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -740,7 +783,7 @@ emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr)
 }
 
 void
-emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr)
+emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -751,7 +794,7 @@ emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr)
 }
 
 void
-emit_asm_prim_fixnump (FILE *f, schptr_t sptr)
+emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -765,7 +808,7 @@ emit_asm_prim_fixnump (FILE *f, schptr_t sptr)
 }
 
 void
-emit_asm_prim_booleanp (FILE *f, schptr_t sptr)
+emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -784,7 +827,7 @@ emit_asm_prim_booleanp (FILE *f, schptr_t sptr)
 //      in condi-tional expressions.  All other Scheme
 //      values, including#t,count as true."
 void
-emit_asm_prim_not (FILE *f, schptr_t sptr)
+emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -796,7 +839,7 @@ emit_asm_prim_not (FILE *f, schptr_t sptr)
 }
 
 void
-emit_asm_prim_charp (FILE *f, schptr_t sptr)
+emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -809,7 +852,7 @@ emit_asm_prim_charp (FILE *f, schptr_t sptr)
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 void
-emit_asm_prim_nullp (FILE *f, schptr_t sptr)
+emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 {
   emit_asm_expr (f, sptr);
 
@@ -821,7 +864,17 @@ emit_asm_prim_nullp (FILE *f, schptr_t sptr)
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
-void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr)
+void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+{
+  emit_asm_expr (f, sptr);
+
+  // This can be improved if we set the tags, masks and shifts in stone
+  fprintf (f, "    notq   %%rax\n");
+  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", ~FX_MASK);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
+}
+
+void emit_asm_prim_fxplus (FILE *f, size_t si, schptr_t sptr, size_t si)
 {
   emit_asm_expr (f, sptr);
 
