@@ -209,17 +209,21 @@ typedef struct schprim
   prim_emmiter emitter;  // Primitive function emmiter
 } schprim_t;
 
-typedef struct schprim_eval1
+typedef struct schprim_eval
 {
   sch_type type;
   schprim_t *prim;
+} schprim_eval_t;
+
+typedef struct schprim_eval1
+{
+  struct schprim_eval;
   schptr_t arg1;
 } schprim_eval1_t;
 
 typedef struct schprim_eval2
 {
-  sch_type type;
-  schprim_t *prim;
+  struct schprim_eval;
   schptr_t arg1;
   schptr_t arg2;
 } schprim_eval2_t;
@@ -288,6 +292,7 @@ gen_new_temp_label (char *str)
 
 bool parse_prim (const char **, schptr_t *);
 bool parse_prim1 (const char **, schptr_t *);
+bool parse_prim2 (const char **, schptr_t *);
 bool parse_expr (const char **, schptr_t *);
 bool parse_imm (const char **, schptr_t *);
 bool parse_imm_bool (const char **, schptr_t *);
@@ -553,7 +558,8 @@ parse_expr (const char **input, schptr_t *sptr)
   if (parse_imm (input, sptr) ||
       parse_prim (input, sptr) ||
       parse_if (input, sptr) ||
-      parse_prim1 (input, sptr))
+      parse_prim1 (input, sptr) ||
+      parse_prim2 (input, sptr))
     return true;
 
   return false;
@@ -627,6 +633,7 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
         pe->arg2 = args[1];
         *sptr = (schptr_t)pe;
       }
+      break;
     default:
       assert (false); // unreachable
       break;
@@ -639,6 +646,12 @@ bool
 parse_prim1 (const char **input, schptr_t *sptr)
 {
   return parse_prim_generic (input, 1, sptr);
+}
+
+bool
+parse_prim2 (const char **input, schptr_t *sptr)
+{
+  return parse_prim_generic (input, 2, sptr);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -661,7 +674,7 @@ parse_prim1 (const char **input, schptr_t *sptr)
 void emit_asm_epilogue (FILE *);
 void emit_asm_prologue (FILE *, const char *);
 void emit_asm_imm (FILE *, schptr_t);
-void emit_asm_if (FILE *, schptr_t);
+void emit_asm_if (FILE *, schptr_t, size_t);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -697,20 +710,15 @@ emit_asm_imm (FILE *f, schptr_t imm)
     fprintf (f, "    movl $%" PRIu64 ", %%eax\n", (uint64_t)imm);
 }
 
-#define emit_asm_prim(f, sptr, si)              \
-  _Generic((sptr),                              \
-  schprim_eval1_t: emit_asm_prim1,              \
-  schprim_eval2_t: emit_asm_prim2) (f, sptr, si)
-
-emit_asm_prim1 (FILE *f, schptr_t sptr, size_t si)
+void
+emit_asm_prim (FILE *f, schptr_t sptr, size_t si)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
-  assert (pe->type == SCH_PRIM_EVAL1);
+  schprim_eval_t *pe = (schprim_eval_t *)sptr;
   pe->prim->emitter (f, sptr, si);
 }
 
 void
-emit_asm_expr (FILE *f, schptr_t sptr)
+emit_asm_expr (FILE *f, schptr_t sptr, size_t si)
 {
   if (sch_imm_p (sptr))
     {
@@ -729,10 +737,10 @@ emit_asm_expr (FILE *f, schptr_t sptr)
       break;
     case SCH_PRIM_EVAL1:
     case SCH_PRIM_EVAL2:
-      emit_asm_prim (f, sptr);
+      emit_asm_prim (f, sptr, si);
       break;
     case SCH_IF:
-      emit_asm_if (f, sptr);
+      emit_asm_if (f, sptr, si);
       break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
@@ -743,27 +751,33 @@ emit_asm_expr (FILE *f, schptr_t sptr)
 
 // Primitives Emitter
 void
-emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   const uint64_t cst = UINT64_C(1) << FX_SHIFT;
   fprintf (f, "    addq $%" PRIu64", %%rax\n", cst);
 }
 
 void
-emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   const uint64_t cst = UINT64_C(1) << FX_SHIFT;
   fprintf (f, "    subq $%" PRIu64 ", %%rax\n", cst);
 }
 
 void
-emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   fprintf (f, "    movl   $%" PRIu64 ", %%edx\n", FALSE_CST);
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FX_TAG);
@@ -772,9 +786,11 @@ emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si __attribute__((unused))
 }
 
 void
-emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
@@ -783,9 +799,11 @@ emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si __attribute__((u
 }
 
 void
-emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
@@ -794,9 +812,11 @@ emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si __attribute__((u
 }
 
 void
-emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", FX_MASK);
@@ -808,9 +828,11 @@ emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si __attribute__((unused))
 }
 
 void
-emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", BOOL_MASK);
@@ -827,9 +849,11 @@ emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)
 //      in condi-tional expressions.  All other Scheme
 //      values, including#t,count as true."
 void
-emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // I *don't* think this one can be optimized by fixing the values
   fprintf (f, "    movq    $%" PRIu64 ", %%rdx\n", FALSE_CST);
@@ -839,9 +863,11 @@ emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
 }
 
 void
-emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", CHAR_MASK);
@@ -852,9 +878,11 @@ emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 void
-emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // I *don't* think this one can be optimized by fixing the values
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", NULL_CST);
@@ -864,9 +892,11 @@ emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
-void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si __attribute__((unused)))
+void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL1);
+  emit_asm_expr (f, pe->arg1, si);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    notq   %%rax\n");
@@ -874,14 +904,19 @@ void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si __attribute__((un
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
 }
 
-void emit_asm_prim_fxplus (FILE *f, size_t si, schptr_t sptr, size_t si)
+void emit_asm_prim_fxplus (FILE *f, schptr_t sptr, size_t si)
 {
-  emit_asm_expr (f, sptr);
+  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL2);
 
-  // This can be improved if we set the tags, masks and shifts in stone
-  fprintf (f, "    notq   %%rax\n");
-  fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", ~FX_MASK);
-  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
+  schptr_t arg1 = pe->arg1;
+  emit_asm_expr (f, arg1, si);
+  fprintf (f, "    xorq   $%" PRIu64 ", %%rax\n", FX_MASK);
+  fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
+
+  schptr_t arg2 = pe->arg2;
+  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  fprintf (f, "    addq   -%zu(%%rsp), %%rax\n", si);
 }
 
 void
@@ -892,7 +927,7 @@ emit_asm_label (FILE *f, char *label)
 
 // Emitting asm for conditional
 void
-emit_asm_if (FILE *f, schptr_t p)
+emit_asm_if (FILE *f, schptr_t p, size_t si)
 {
   schif_t *pif = (schif_t *) p;
 
@@ -903,15 +938,15 @@ emit_asm_if (FILE *f, schptr_t p)
   gen_new_temp_label (endl);
 
 
-  emit_asm_expr (f, pif->condition);
+  emit_asm_expr (f, pif->condition, si);
 
   // Check if boolean value is true of false and jump accordingly
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FALSE_CST);
   fprintf (f, "    je     %s\n", elsel);
-  emit_asm_expr (f, pif->thenv);
+  emit_asm_expr (f, pif->thenv, si);
   fprintf (f, "    jmp    %s\n", endl);
   emit_asm_label (f, elsel);
-  emit_asm_expr (f, pif->elsev);
+  emit_asm_expr (f, pif->elsev, si);
   emit_asm_label (f, endl);
 }
 
@@ -949,7 +984,7 @@ output_asm (schptr_t sptr)
       exit (EXIT_FAILURE);
     }
 
-    FILE *i = fdopen (ifd, "w");
+  FILE *i = fdopen (ifd, "w");
   if (!i)
     {
       fprintf (stderr, "cannot open file descriptor for `%s'\n", itemplate);
@@ -957,8 +992,17 @@ output_asm (schptr_t sptr)
     }
 
   // write asm file
+  emit_asm_prologue (i, "L_scheme_entry");
+  emit_asm_expr (i, sptr, WORD_BYTES);
+  emit_asm_epilogue (i);
+
+  // scheme entry received one argument in %rdi,
+  // which is the stack top pointer.
   emit_asm_prologue (i, "scheme_entry");
-  emit_asm_expr (i, sptr);
+  fprintf (i, "    movq %%rsp, %%rcx\n");
+  fprintf (i, "    leaq -4(%%rdi), %%rsp\n");
+  fprintf (i, "    call L_scheme_entry\n");
+  fprintf (i, "    movq %%rcx, %%rsp\n");
   emit_asm_epilogue (i);
 
   // close file
