@@ -937,12 +937,15 @@ emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
 
   schptr_t arg1 = pe->arg1;
   emit_asm_expr (f, arg1, si);
+  fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
   emit_asm_expr (f, arg2, si + WORD_BYTES);
-  fprintf (f, "    xorq   $%" PRIu64 ", %%rax\n", FX_MASK);
+  fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    subq   -%zu(%%rsp), %%rax\n", si);
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
 }
 
 void
