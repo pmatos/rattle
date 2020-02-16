@@ -6,6 +6,12 @@ CFLAGS = -std=gnu11 -fms-extensions
 EXTRA_CFLAGS =
 LDFLAGS = -ldl
 
+# If clang we need to add a warning disable
+CCNAME = $(findstring clang,$(shell $(CC) --version))
+ifeq ($(CCNAME),clang)
+CFLAGS := $(CFLAGS) -Wno-microsoft-anon-tag
+endif
+
 ifdef DEBUG
 CFLAGS := $(CFLAGS) -O0 -g
 LDFLAGS := $(LDFLAGS)
