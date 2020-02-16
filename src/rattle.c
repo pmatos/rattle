@@ -248,7 +248,8 @@ void emit_asm_prim_booleanp (FILE *, schptr_t, size_t);
 void emit_asm_prim_charp (FILE *, schptr_t, size_t);
 void emit_asm_prim_not (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxlognot (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxplus (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxadd (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxsub (FILE *, schptr_t, size_t);
 
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
@@ -262,7 +263,8 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "boolean?", 1, emit_asm_prim_booleanp },
     { SCH_PRIM, "char?", 1, emit_asm_prim_charp },
     { SCH_PRIM, "fxlognot", 1, emit_asm_prim_fxlognot },
-    { SCH_PRIM, "fx+", 2, emit_asm_prim_fxplus }
+    { SCH_PRIM, "fx+", 2, emit_asm_prim_fxadd },
+    { SCH_PRIM, "fx-", 2, emit_asm_prim_fxsub }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
@@ -904,7 +906,7 @@ void emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
 }
 
-void emit_asm_prim_fxplus (FILE *f, schptr_t sptr, size_t si)
+void emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
@@ -917,6 +919,21 @@ void emit_asm_prim_fxplus (FILE *f, schptr_t sptr, size_t si)
   schptr_t arg2 = pe->arg2;
   emit_asm_expr (f, arg2, si + WORD_BYTES);
   fprintf (f, "    addq   -%zu(%%rsp), %%rax\n", si);
+}
+
+void emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
+{
+  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL2);
+
+  schptr_t arg1 = pe->arg1;
+  emit_asm_expr (f, arg1, si);
+  fprintf (f, "    xorq   $%" PRIu64 ", %%rax\n", FX_MASK);
+  fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
+
+  schptr_t arg2 = pe->arg2;
+  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  fprintf (f, "    subq   -%zu(%%rsp), %%rax\n", si);
 }
 
 void
