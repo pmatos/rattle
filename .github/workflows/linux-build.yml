@@ -17,6 +17,7 @@ jobs:
     - name: Build
       env:
         COVERAGE: 1
+        CC: gcc-8
       run: make 
     - uses: Bogdanp/setup-racket@v0.5
       with:
