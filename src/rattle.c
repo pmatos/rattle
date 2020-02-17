@@ -250,6 +250,7 @@ void emit_asm_prim_not (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxlognot (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxadd (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxsub (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxmul (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxlogand (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxlogor (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxeq (FILE *, schptr_t, size_t);
@@ -272,6 +273,7 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "fxlognot", 1, emit_asm_prim_fxlognot },
     { SCH_PRIM, "fx+", 2, emit_asm_prim_fxadd },
     { SCH_PRIM, "fx-", 2, emit_asm_prim_fxsub },
+    { SCH_PRIM, "fx*", 2, emit_asm_prim_fxmul },
     { SCH_PRIM, "fxlogand", 2, emit_asm_prim_fxlogand },
     { SCH_PRIM, "fxlogor", 2, emit_asm_prim_fxlogor },
     { SCH_PRIM, "fx=", 2, emit_asm_prim_fxeq },
@@ -956,6 +958,25 @@ emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    movq   %%rax, %%r8\n");
   fprintf (f, "    movq   -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    subq   %%r8, %%rax\n");
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
+  fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
+}
+
+void
+emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
+{
+  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  assert (pe->type == SCH_PRIM_EVAL2);
+
+  schptr_t arg1 = pe->arg1;
+  emit_asm_expr (f, arg1, si);
+  fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
+  fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
+
+  schptr_t arg2 = pe->arg2;
+  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
+  fprintf (f, "    imulq  -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", FX_TAG);
 }
