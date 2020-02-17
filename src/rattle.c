@@ -259,6 +259,7 @@ void emit_asm_prim_fxle (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxgt (FILE *, schptr_t, size_t);
 void emit_asm_prim_fxge (FILE *, schptr_t, size_t);
 
+// Order matter
 static const schprim_t primitives[] =
   { { SCH_PRIM, "fxadd1", 1, emit_asm_prim_fxadd1 },
     { SCH_PRIM, "fxsub1", 1, emit_asm_prim_fxsub1 },
@@ -277,10 +278,10 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "fxlogand", 2, emit_asm_prim_fxlogand },
     { SCH_PRIM, "fxlogor", 2, emit_asm_prim_fxlogor },
     { SCH_PRIM, "fx=", 2, emit_asm_prim_fxeq },
-    { SCH_PRIM, "fx<", 2, emit_asm_prim_fxlt },
     { SCH_PRIM, "fx<=", 2, emit_asm_prim_fxle },
-    { SCH_PRIM, "fx>", 2, emit_asm_prim_fxgt },
-    { SCH_PRIM, "fx>=", 2, emit_asm_prim_fxge }
+    { SCH_PRIM, "fx<", 2, emit_asm_prim_fxlt },
+    { SCH_PRIM, "fx>=", 2, emit_asm_prim_fxge },
+    { SCH_PRIM, "fx>", 2, emit_asm_prim_fxgt }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
@@ -963,7 +964,7 @@ emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxmul (FILE *f, schptr_t sptr, size_t si)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
@@ -1041,10 +1042,12 @@ emit_asm_prim_fxlt (FILE *f, schptr_t sptr, size_t si)
 
   schptr_t arg2 = pe->arg2;
   emit_asm_expr (f, arg2, si + WORD_BYTES);
+  fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", FX_SHIFT, si);
+  fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    movq      $%" PRIu64 ", %%rdx\n", FALSE_CST);
   fprintf (f, "    movabsq   $%" PRIu64 ", %%rax\n", TRUE_CST);
-  fprintf (f, "    cmovbe    %%rdx, %%rax\n");
+  fprintf (f, "    cmovle    %%rdx, %%rax\n");
 }
 
 void
@@ -1062,7 +1065,7 @@ emit_asm_prim_fxle (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    movq      $%" PRIu64 ", %%rdx\n", FALSE_CST);
   fprintf (f, "    movabsq   $%" PRIu64 ", %%rax\n", TRUE_CST);
-  fprintf (f, "    cmovb     %%rdx, %%rax\n");
+  fprintf (f, "    cmovl     %%rdx, %%rax\n");
 }
 
 void
@@ -1080,7 +1083,7 @@ emit_asm_prim_fxgt (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    movq      $%" PRIu64 ", %%rdx\n", FALSE_CST);
   fprintf (f, "    movabsq   $%" PRIu64 ", %%rax\n", TRUE_CST);
-  fprintf (f, "    cmovnb    %%rdx, %%rax\n");
+  fprintf (f, "    cmovge    %%rdx, %%rax\n");
 }
 
 void
@@ -1098,7 +1101,7 @@ emit_asm_prim_fxge (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    movq      $%" PRIu64 ", %%rdx\n", FALSE_CST);
   fprintf (f, "    movabsq   $%" PRIu64 ", %%rax\n", TRUE_CST);
-  fprintf (f, "    cmova     %%rdx, %%rax\n");
+  fprintf (f, "    cmovg     %%rdx, %%rax\n");
 }
 
 void
