@@ -1300,7 +1300,7 @@ output_asm (schptr_t sptr)
   emit_asm_prologue (i, "scheme_entry");
   fprintf (i, "    movq %%rsp, %%rcx\n");
   fprintf (i, "    leaq -4(%%rdi), %%rsp\n");
-  fprintf (i, "    call L_scheme_entry\n");
+  fprintf (i, "    call %sL_scheme_entry\n", ASM_SYMBOL_PREFIX);
   fprintf (i, "    movq %%rcx, %%rsp\n");
   emit_asm_epilogue (i);
 
