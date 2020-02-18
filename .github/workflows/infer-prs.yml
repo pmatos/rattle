@@ -27,11 +27,11 @@ jobs:
       run: |
         git diff --name-only HEAD..origin/master > index.txt
         infer capture -- make
-        infer analyze --changed-files-index index.txt
+        infer analyze --progress-bar-style=plain --changed-files-index index.txt
         cp infer-out/report.json report-feature.json
         git checkout master
         infer capture --reactive -- make
-        infer analyze --reactive --changed-files-index index.txt
+        infer analyze --progress-bar-style=plain --reactive --changed-files-index index.txt
         infer reportdiff --report-current report-feature.json --report-previous infer-out/report.json
     - name: Check differential
       run: |
