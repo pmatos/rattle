@@ -20,19 +20,22 @@
 #include <stdbool.h>
 #include <assert.h>
 
+// Number of bytes in one word
+#define WORD_BYTES sizeof (size_t)
+
 //
 // Platform
 //
 static inline bool
 arch_32_p (void)
 {
-  return sizeof (size_t) == 4;
+  return WORD_BYTES == 4;
 }
 
 static inline bool
 arch_64_p (void)
 {
-  return sizeof (size_t) == 8;
+  return WORD_BYTES == 8;
 }
 
 // On MacOS Xcode 11, UINT8_C seems to be a no-op and this causes a few warnings
