@@ -321,6 +321,9 @@ gen_new_temp_label (char *str)
 //
 ///////////////////////////////////////////////////////////////////////
 
+// Main parsing procedures
+
+bool parse_identifier (const char **, schptr_t *);
 bool parse_prim (const char **, schptr_t *);
 bool parse_prim1 (const char **, schptr_t *);
 bool parse_prim2 (const char **, schptr_t *);
@@ -331,6 +334,15 @@ bool parse_imm_null (const char **, schptr_t *);
 bool parse_imm_fixnum (const char **, schptr_t *);
 bool parse_imm_char (const char **, schptr_t *);
 bool parse_if (const char **, schptr_t *);
+
+
+// Helper parsing procedures
+
+bool parse_initial (const char **, char *);
+bool parse_letter (const char **, char *);
+bool parse_special_initial (const char **, char *);
+bool parse_subsequent (const char **, char *);
+bool parse_digit (const char **, char *);
 
 bool parse_char (const char **, char);
 bool parse_lparen (const char **);
