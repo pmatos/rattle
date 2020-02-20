@@ -82,6 +82,19 @@ print_ptr(schptr_t x)
   printf ("\n");
 }
 
+size_t
+getpagesz (void)
+{
+  int pagesize = sysconf (_SC_PAGESIZE);
+
+  if (pagesize < 0)
+    {
+      fprintf (stderr, "failed to calculate page size for system\n");
+      exit (EXIT_FAILURE);
+    }
+
+  return (size_t) pagesize;
+}
 
 // Stack size in words (enough for 16K words)
 #define WORD_STACK_SIZE (16 * 1024)
@@ -115,7 +128,7 @@ print_ptr(schptr_t x)
 static uint8_t *
 allocate_protected_space (size_t size)
 {
-  int pagesize = sysconf (_SC_PAGESIZE);
+  size_t pagesize = getpagesz ();
   int status = 0;
 
   // this is the requested size aligned to a page
@@ -155,7 +168,7 @@ allocate_protected_space (size_t size)
 static void
 deallocate_protected_space (uint8_t *p, size_t size)
 {
-  int page = sysconf (_SC_PAGESIZE);
+  size_t page = getpagesz ();
   int aligned_size = ((size + page - 1) / page) * page;
   int status = munmap (p - page, aligned_size + (2 * page));
   if (status)
