@@ -22,10 +22,7 @@ jobs:
         wget https://scan.coverity.com/download/linux64 --post-data "token=${{ secrets.COVERITY_TOKEN }}&project=pmatos%2Frattle" -O coverity_tool.tgz
         tar -xvf coverity_tool.tgz
     - name: Build
-      env:
-        DEBUG: 1
-        PATH: cov-analysis-linux64-2019.03/bin:${PATH}
-      run: cov-build --dir cov-int make
+      run: cov-analysis-linux64-2019.03/bin/cov-build --dir cov-int make
     - name: Submit results
       run: |
         export COMMITID="git_sha$(git rev-parse --short HEAD)"
