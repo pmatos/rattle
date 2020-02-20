@@ -1427,9 +1427,9 @@ compile_expression (const char *e)
     err_parse (e);
 
   const char *tmpdir = find_system_tmpdir ();
-  char otemplate[1024];
-  strcpy (otemplate, tmpdir);
-  strcat (otemplate, "/librattleXXXXXX.so");
+  char otemplate[FILE_PATH_MAX];
+  strncpy (otemplate, tmpdir, FILE_PATH_MAX);
+  strncat (otemplate, "/librattleXXXXXX.so", FILE_PATH_MAX - strlen (tmpdir));
 
   int ofd = mkstemps (otemplate, 3);
   if (ofd == -1)
