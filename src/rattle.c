@@ -84,10 +84,12 @@ main (int argc, char *argv[]) {
           break;
         case 'c':
           compile_p = true;
-          strcpy (input, optarg);
+          strncpy (input, optarg, FILE_PATH_MAX);
+          input[FILE_PATH_MAX - 1] = '\0';
           break;
         case 'o':
-          strcpy (output, optarg);
+          strncpy (output, optarg, FILE_PATH_MAX);
+          output[FILE_PATH_MAX - 1] = '\0';
           break;
         case 'e':
           evaluate_p = true;
