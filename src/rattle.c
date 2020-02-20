@@ -1274,9 +1274,10 @@ char *
 output_asm (schptr_t sptr)
 {
   const char *tmpdir = find_system_tmpdir ();
-  char itemplate[FILE_PATH_MAX];
+  char itemplate[FILE_PATH_MAX] = { 0, };
   strncpy (itemplate, tmpdir, FILE_PATH_MAX);
   strncat (itemplate, "/rattleXXXXXX.s", FILE_PATH_MAX - strlen (tmpdir));
+  itemplate[FILE_PATH_MAX - 1] = '\0';
 
   int ifd = mkstemps (itemplate, 2);
   if (ifd == -1)
@@ -1429,9 +1430,10 @@ compile_expression (const char *e)
     err_parse (e);
 
   const char *tmpdir = find_system_tmpdir ();
-  char otemplate[FILE_PATH_MAX];
+  char otemplate[FILE_PATH_MAX] = { 0, };
   strncpy (otemplate, tmpdir, FILE_PATH_MAX);
   strncat (otemplate, "/librattleXXXXXX.so", FILE_PATH_MAX - strlen (tmpdir));
+  otemplate[FILE_PATH_MAX - 1] = '\0';
 
   int ofd = mkstemps (otemplate, 3);
   if (ofd == -1)
