@@ -6,7 +6,7 @@ on: [pull_request]
 #      - master
 
 jobs:
-  infer:
+  covbuild:
 
     runs-on: ubuntu-latest
     container: debian:buster-slim
@@ -16,7 +16,7 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y make curl gcc
+        apt-get install -y make curl gcc wget
     - name: Install Coverity Build
       run: |
         wget https://scan.coverity.com/download/linux64 --post-data "token=${{ secrets.CODECOV_TOKEN }}&project=pmatos%2Frattle" -O coverity_tool.tgz
