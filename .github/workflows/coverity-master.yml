@@ -1,9 +1,9 @@
 name: Coverity CI
 
-on: [pull_request]
-#  push:
-#    branches:
-#      - master
+on:
+  push:
+    branches:
+      - master
 
 jobs:
   covbuild:
