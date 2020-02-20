@@ -19,7 +19,7 @@ jobs:
         apt-get install -y make curl gcc wget
     - name: Install Coverity Build
       run: |
-        wget https://scan.coverity.com/download/linux64 --post-data "token=${{ secrets.CODECOV_TOKEN }}&project=pmatos%2Frattle" -O coverity_tool.tgz
+        wget https://scan.coverity.com/download/linux64 --post-data "token=${{ secrets.COVERITY_TOKEN }}&project=pmatos%2Frattle" -O coverity_tool.tgz
         tar -xvf coverity_tool.tgz
     - name: Build
       env:
@@ -30,4 +30,4 @@ jobs:
       run: |
         export COMMITID="git_sha$(git rev-parse --short HEAD)"
         tar czf rattle.tgz cov-int
-        curl --form token=${{ secrets.CODECOV_TOKEN }} --form email=pmatos@linki.tools --form file=@rattle.tgz --form version=$COMMITID --form description="Experimental R7RS Scheme Compiler" https://scan.coverity.com/builds\?project\=pmatos%2Frattle
+        curl --form token=${{ secrets.COVERITY_TOKEN }} --form email=pmatos@linki.tools --form file=@rattle.tgz --form version=$COMMITID --form description="Experimental R7RS Scheme Compiler" https://scan.coverity.com/builds\?project\=pmatos%2Frattle
