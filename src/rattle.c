@@ -1272,9 +1272,9 @@ char *
 output_asm (schptr_t sptr)
 {
   const char *tmpdir = find_system_tmpdir ();
-  char itemplate[1024];
-  strcpy (itemplate, tmpdir);
-  strcat (itemplate, "/rattleXXXXXX.s");
+  char itemplate[FILE_PATH_MAX];
+  strncpy (itemplate, tmpdir, FILE_PATH_MAX);
+  strncat (itemplate, "/rattleXXXXXX.s", FILE_PATH_MAX - strlen (tmpdir));
 
   int ifd = mkstemps (itemplate, 2);
   if (ifd == -1)
