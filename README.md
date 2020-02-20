@@ -9,6 +9,11 @@ Rattle is an experiment to scratch an itch.
        src="https://scan.coverity.com/projects/20281/badge.svg"/>
 </a>
 
+<a href="https://scan.coverity.com/projects/pmatos-rattle">
+  <img alt="Coverity Scan Build Status"
+       src="https://scan.coverity.com/projects/20281/badge.svg"/>
+</a>
+
 Disregard - using it might destroy your PC. Don't do it.
 If you use it and does destroy your PC, you only have yourself to blame.
 
