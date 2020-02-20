@@ -1403,23 +1403,20 @@ compile (const char *input, const char *output)
 const char *
 find_system_tmpdir (void)
 {
-  static const char *default_tmpdir = "/tmp/";
+  static char real_tmpdir[FILE_PATH_MAX] = "/tmp/";
+  const char *vars[] = { "TMPDIR", "TMP", "TEMPFILE", "TEMP" };
+  const size_t varslen = sizeof (vars) / sizeof (vars[0]);
 
-  char *tmpdir = NULL;
+  for (size_t i = 0; i < varslen; i++)
+    {
+      const char *v = vars[i];
+      char *tmpdir = getenv (v);
 
-  if ((tmpdir = getenv ("TMPDIR")))
-    return tmpdir;
-  else if ((tmpdir = getenv ("TMP")))
-    return tmpdir;
-  else if ((tmpdir = getenv ("TEMPFILE")))
-    return tmpdir;
-  else if ((tmpdir = getenv ("TEMP")))
-    return tmpdir;
-
-  if (tmpdir)
-    return tmpdir;
-  else
-    return default_tmpdir;
+      if (tmpdir && *tmpdir != '\0')
+        strncpy (real_tmpdir, tmpdir, FILE_PATH_MAX);
+      real_tmpdir[FILE_PATH_MAX-1] = '\0';
+    }
+  return real_tmpdir;
 }
 
 void
