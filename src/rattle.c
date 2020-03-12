@@ -201,7 +201,7 @@ typedef uint64_t sch_imm;
 struct schprim;
 typedef void (*prim_emmiter) (FILE *, schptr_t, size_t);
 
-typedef enum { SCH_PRIM, SCH_IF, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
 
 typedef struct schprim
 {
@@ -237,6 +237,12 @@ typedef struct schif
   schptr_t thenv;     // then value
   schptr_t elsev;     // else value
 } schif_t;
+
+typedef struct schid
+{
+  sch_type type;
+  char *name;
+} schid_t;
 
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schptr_t, size_t);
@@ -338,13 +344,14 @@ bool parse_if (const char **, schptr_t *);
 
 // Helper parsing procedures
 
-bool parse_initial (const char **, char *);
-bool parse_letter (const char **, char *);
-bool parse_special_initial (const char **, char *);
-bool parse_subsequent (const char **, char *);
-bool parse_digit (const char **, char *);
+bool parse_initial (const char **);
+bool parse_letter (const char **);
+bool parse_special_initial (const char **);
+bool parse_subsequent (const char **);
+bool parse_digit (const char **);
 
 bool parse_char (const char **, char);
+bool parse_char_seq (const char **, const char *);
 bool parse_lparen (const char **);
 bool parse_rparen (const char **);
 bool parse_whitespace (const char **);
@@ -356,6 +363,318 @@ parse_whitespace (const char **input)
   while (isspace (**input))
     (*input)++;
   return *input != tmp; // return true if whitespace was skipped
+}
+
+bool
+parse_letter (const char **input)
+{
+  char i = **input;
+
+  if ((i >= 'a' && i <= 'z') ||
+      (i >= 'A' && i <= 'Z'))
+    {
+      (*input)++;
+      return true;
+    }
+
+  return false;
+}
+
+bool
+parse_special_initial (const char **input)
+{
+  char i = **input;
+
+  switch (i)
+    {
+    case '!':
+    case '$':
+    case '%':
+    case '&':
+    case '*':
+    case '/':
+    case ':':
+    case '<':
+    case '=':
+    case '>':
+    case '?':
+    case '^':
+    case '_':
+    case '~':
+      (*input)++;
+      return true;
+    }
+
+  return false;
+}
+
+bool
+parse_initial (const char **input)
+{
+  // Parses an expression as follows:
+  //   <letter>
+  // | <special initial>
+  return parse_letter (input) || parse_special_initial (input);
+}
+
+bool
+parse_explicit_sign (const char **input)
+{
+  // Parses an expression as follows:
+  // + | -
+  return parse_char (input, '+') || parse_char (input, '-');
+}
+
+bool
+parse_special_subsequent (const char **input)
+{
+  // Parses an expression as follows:
+  //   <explicit sign>
+  // | .
+  // | @
+  return parse_explicit_sign (input)
+    || parse_char (input, '.')
+    || parse_char (input, '@');
+}
+
+bool
+parse_digit (const char **input)
+{
+  switch (**input)
+    {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      (*input)++;
+      return true;
+    }
+  return false;
+}
+
+bool
+parse_subsequent (const char **input)
+{
+  // Parses an expression as follows:
+  //    <initial>
+  // |  <digit>
+  // |  <special subsequent>
+  return parse_initial (input)
+    || parse_digit (input)
+    || parse_special_subsequent (input);
+}
+
+bool
+parse_vertical_line (const char **input)
+{
+  return parse_char (input, '|');
+}
+
+bool
+parse_char_sequence (const char **input, const char *seq)
+{
+  return !strncmp (*input, seq, strlen (seq));
+}
+
+bool
+parse_hex_digit (const char **input)
+{
+  switch (**input)
+    {
+    case 'a':
+    case 'b':
+    case 'c':
+    case 'd':
+    case 'e':
+    case 'f':
+      (*input)++;
+      return true;
+    }
+
+  return parse_digit (input);
+}
+
+bool
+parse_hex_scalar_value (const char **input)
+{
+  // Parses an expression as follows:
+  // <hex digit> +
+  if (!parse_hex_digit (input))
+    return false;
+
+  while (parse_hex_digit (input));
+  return true;
+}
+
+bool
+parse_inline_hex_escape (const char **input)
+{
+  // Parses an expression as follows:
+  // \x <hex scalar value>
+  return parse_char_sequence (input, "\\x") && parse_hex_scalar_value(input);
+}
+
+bool
+parse_mnemonic_escape (const char **input)
+{
+  return parse_char_seq (input, "\\a")
+    || parse_char_seq (input, "\\b")
+    || parse_char_seq (input, "\\t")
+    || parse_char_seq (input, "\\n")
+    || parse_char_seq (input, "\\r");
+}
+
+bool
+parse_symbol_element (const char **input)
+{
+  // Parses an expression as follows:
+  // <any char other than <vertical line> or \>
+  // | <inline hex escape>
+  // | <mnemonic excape>
+  // | \|
+
+  if (**input != '|' && **input != '\\')
+    {
+      (*input)++;
+      return true;
+    }
+  else if ((*input)[0] == '\\' && (*input)[1] == '|')
+    {
+      (*input) += 2;
+      return true;
+    }
+  else
+    return parse_inline_hex_escape (input)
+      || parse_mnemonic_escape (input);
+}
+
+bool
+parse_sign_subsequent (const char **input)
+{
+  // Parses an expression as follows:
+  // <initial>
+  // | <explicit sign>
+  // | @
+  return parse_initial (input)
+    || parse_explicit_sign (input)
+    || parse_char (input, '@');
+}
+
+bool
+parse_dot_subsequent (const char **input)
+{
+  return parse_sign_subsequent (input) || parse_char (input, '.');
+}
+
+bool
+parse_peculiar_identifier (const char **input)
+{
+  const char *ptr = *input;
+
+  // Parses an expression as follows:
+  //   <explicit sign>
+  // | <explicit sign> <sign subsequent> <subsequent>*
+  // | <explicit sign> . <dot subsequent> <subsequent>*
+  // | . <dot subsequent> <subsequent>*
+  if (parse_explicit_sign (&ptr) &&
+      parse_sign_subsequent (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      *input = ptr;
+      return true;
+    }
+  else if (parse_explicit_sign (&ptr) &&
+           parse_char (&ptr, '.') &&
+           parse_dot_subsequent (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      *input = ptr;
+      return true;
+    }
+  else if (parse_char (&ptr, '.') &&
+           parse_dot_subsequent (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      *input = ptr;
+      return true;
+    }
+  else if (parse_explicit_sign (&ptr))
+    {
+      *input = ptr;
+      return true;
+    }
+
+  return false;
+}
+
+bool
+parse_identifier (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+  char *id = NULL;
+
+  // Parses an expression as follows:
+  //    <initial> <subsequent>*
+  // |  <vertical line> <symbol element>* <vertical line>
+  // |  <peculiar identifier>
+  if (parse_initial (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      id = strndup (*input, ptr - *input);
+    }
+  else if (parse_vertical_line (&ptr))
+    {
+      while (parse_symbol_element (&ptr));
+      if (parse_vertical_line (&ptr))
+        id = strndup (*input, ptr - *input);
+    }
+  else if (parse_peculiar_identifier (&ptr))
+    id = strndup (*input, ptr - *input);
+
+  if (!id)
+    return false;
+
+  // Successfully parsed an identifier so we can now create it
+  schid_t *sid = (schid_t *) alloc (sizeof *sid);
+  if (!sid)
+    err_oom ();
+
+  sid->type = SCH_ID;
+  sid->name = id;
+
+  *sptr = (schptr_t) sid;
+  return true;
+}
+
+bool
+parse_binding_spec (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  // Parses an expression as follows:
+  // (<identifier> <expression>)
+  if (!parse_lparen(&ptr))
+    return false;
+
+  
+}
+
+bool
+parse_let_wo_id (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  // Parses an expression as follows:
+  // (let (<binding spec>*) <body>)
+  if (!parse_lparen (&ptr))
+    return false;
+
 }
 
 bool
