@@ -653,7 +653,7 @@ parse_identifier (const char **input, schptr_t *sptr)
 }
 
 bool
-parse_binding_spec (const char **input, schptr_t *sptr)
+parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
 {
   const char *ptr = *input;
 
@@ -662,7 +662,31 @@ parse_binding_spec (const char **input, schptr_t *sptr)
   if (!parse_lparen(&ptr))
     return false;
 
+  // skip possible whitespace between lparen and the identifier
+  (void) parse_whitespace (&ptr);
+
+  schptr_t identifier;
+  if (!parse_identifier (&ptr, &identifier))
+    return false;
+
+  // skip possible whitespace between identifier and expression
+  (void) parse_whitespace (&ptr);
+
+  schptr_t expression;
+  if (!parse_expression (&ptr, &expression))
+    return false;
+
+  // skip possible whitespace between expression and rparen
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  *input = ptr;
+  *left = identifier;
+  *right = expression;
   
+  return true;
 }
 
 bool
@@ -686,7 +710,7 @@ parse_if (const char **input, schptr_t *sptr)
   if (!parse_lparen (&ptr))
     return false;
 
-  // skip possible whilespace between lparen and if identifier
+  // skip possible whitespace between lparen and if keyword
   (void) parse_whitespace (&ptr);
 
   if (ptr[0] != 'i' || ptr[1] != 'f')
