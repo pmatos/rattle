@@ -201,7 +201,7 @@ typedef uint64_t sch_imm;
 struct schprim;
 typedef void (*prim_emmiter) (FILE *, schptr_t, size_t);
 
-typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_EXPR_SEQ, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
 
 typedef struct schprim
 {
@@ -257,6 +257,12 @@ typedef struct schlet
   binding_spec_list_t *bindings;
   schptr_t body;
 } schlet_t;
+
+typedef struct schexprseq
+{
+  sch_type type;
+  expression_list_t *expr;
+} schexprseq_t;
 
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schptr_t, size_t);
@@ -704,6 +710,38 @@ parse_binding_spec (const char **input, schid_t *left, schptr_t *right)
   *input = ptr;
   *left = identifier;
   *right = expression;
+
+  return true;
+}
+
+/* bool */
+/* parse_definition (const char **input, schptr_t *sptr) */
+/* { */
+/*   return false; */
+/* } */
+
+bool
+parse_body (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  // a body is a sequence of definitions followed by a
+  // non empty sequence of expressions
+  // TODO skipping definitions for now
+  /* definition_list_t *defs = NULL; */
+  /* definition_t def; */
+  /* while (parse_definition (ptr, *def)) */
+  /*   { */
+
+  /*   } */
+
+  sequence_t seq;
+  if (!parse_sequence (ptr, &seq))
+    {
+
+    }
+
+  // TODO build body
 
   return true;
 }
