@@ -201,7 +201,7 @@ typedef uint64_t sch_imm;
 struct schprim;
 typedef void (*prim_emmiter) (FILE *, schptr_t, size_t);
 
-typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
 
 typedef struct schprim
 {
@@ -243,6 +243,20 @@ typedef struct schid
   sch_type type;
   char *name;
 } schid_t;
+
+typedef struct binding_spec_list
+{
+  schid_t id;
+  schptr_t expr;
+  struct binding_spec_list *next;
+} binding_spec_list_t;
+
+typedef struct schlet
+{
+  sch_type type;
+  binding_spec_list_t *bindings;
+  schptr_t body;
+} schlet_t;
 
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schptr_t, size_t);
@@ -351,7 +365,7 @@ bool parse_subsequent (const char **);
 bool parse_digit (const char **);
 
 bool parse_char (const char **, char);
-bool parse_char_seq (const char **, const char *);
+bool parse_char_sequence (const char **, const char *);
 bool parse_lparen (const char **);
 bool parse_rparen (const char **);
 bool parse_whitespace (const char **);
@@ -479,7 +493,12 @@ parse_vertical_line (const char **input)
 bool
 parse_char_sequence (const char **input, const char *seq)
 {
-  return !strncmp (*input, seq, strlen (seq));
+  if (!strncmp (*input, seq, strlen (seq)))
+    {
+      (*input) += strlen (seq);
+      return true;
+    }
+  return false;
 }
 
 bool
@@ -523,11 +542,11 @@ parse_inline_hex_escape (const char **input)
 bool
 parse_mnemonic_escape (const char **input)
 {
-  return parse_char_seq (input, "\\a")
-    || parse_char_seq (input, "\\b")
-    || parse_char_seq (input, "\\t")
-    || parse_char_seq (input, "\\n")
-    || parse_char_seq (input, "\\r");
+  return parse_char_sequence (input, "\\a")
+    || parse_char_sequence (input, "\\b")
+    || parse_char_sequence (input, "\\t")
+    || parse_char_sequence (input, "\\n")
+    || parse_char_sequence (input, "\\r");
 }
 
 bool
@@ -653,7 +672,7 @@ parse_identifier (const char **input, schptr_t *sptr)
 }
 
 bool
-parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
+parse_binding_spec (const char **input, schid_t *left, schptr_t *right)
 {
   const char *ptr = *input;
 
@@ -685,7 +704,7 @@ parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
   *input = ptr;
   *left = identifier;
   *right = expression;
-  
+
   return true;
 }
 
@@ -699,6 +718,64 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
   if (!parse_lparen (&ptr))
     return false;
 
+  // skip possible whitespace between lparen and let keyword
+  (void) parse_whitespace (&ptr);
+
+  if (! parse_char_sequence (&ptr, "let"))
+    return false;
+
+  // skip possible whitespace between let and lparen
+  if (!parse_lparen (&ptr))
+    return false;
+
+  // Now we parse each of the binding specs and store them
+  binding_spec_list_t *bindings = NULL;
+  schptr_t body;
+
+  while (1)
+    {
+      schid_t id;
+      schptr_t expr;
+      if (!parse_binding_spec (&ptr, &id, &expr))
+        break;
+
+      binding_spec_list_t *b = alloc (sizeof (*b));
+      b->id = id;
+      b->expr = expr;
+      b->next = bindings;
+
+      bindings = b;
+    }
+
+  // skip possible whitespace between last binding spec and rparen
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  // skip possible whitespace between rparen and body
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_body (&ptr, &body))
+    return false;
+
+  // skip possible whitespace between body and rparen
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  // Parse of let successful and complete
+  *input = ptr;
+
+  schlet_t *l = (schlet_t *) alloc (sizeof (*l));
+  l->type = SCH_LET;
+  l->bindings = bindings;
+  l->body = body;
+
+  *sptr = (schptr_t) l;
+
+  return true;
 }
 
 bool
@@ -713,9 +790,8 @@ parse_if (const char **input, schptr_t *sptr)
   // skip possible whitespace between lparen and if keyword
   (void) parse_whitespace (&ptr);
 
-  if (ptr[0] != 'i' || ptr[1] != 'f')
+  if (! parse_char_sequence (&ptr, "if"))
     return false;
-  ptr += 2;
 
   // skip whitespace between if identifier and condition
   (void) parse_whitespace (&ptr);
