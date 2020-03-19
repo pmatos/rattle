@@ -246,7 +246,7 @@ typedef struct schid
 
 typedef struct binding_spec_list
 {
-  schid_t id;
+  schid_t *id;
   schptr_t expr;
   struct binding_spec_list *next;
 } binding_spec_list_t;
@@ -258,10 +258,16 @@ typedef struct schlet
   schptr_t body;
 } schlet_t;
 
+typedef struct expression_list
+{
+  schptr_t expr;
+  struct expression_list *next;
+} expression_list_t;
+
 typedef struct schexprseq
 {
   sch_type type;
-  expression_list_t *expr;
+  expression_list_t *seq;
 } schexprseq_t;
 
 // Primitive emitter prototypes
@@ -353,7 +359,7 @@ bool parse_identifier (const char **, schptr_t *);
 bool parse_prim (const char **, schptr_t *);
 bool parse_prim1 (const char **, schptr_t *);
 bool parse_prim2 (const char **, schptr_t *);
-bool parse_expr (const char **, schptr_t *);
+bool parse_expression (const char **, schptr_t *);
 bool parse_imm (const char **, schptr_t *);
 bool parse_imm_bool (const char **, schptr_t *);
 bool parse_imm_null (const char **, schptr_t *);
@@ -678,7 +684,7 @@ parse_identifier (const char **input, schptr_t *sptr)
 }
 
 bool
-parse_binding_spec (const char **input, schid_t *left, schptr_t *right)
+parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
 {
   const char *ptr = *input;
 
@@ -708,6 +714,7 @@ parse_binding_spec (const char **input, schid_t *left, schptr_t *right)
     return false;
 
   *input = ptr;
+
   *left = identifier;
   *right = expression;
 
@@ -735,13 +742,35 @@ parse_body (const char **input, schptr_t *sptr)
 
   /*   } */
 
-  sequence_t seq;
-  if (!parse_sequence (ptr, &seq))
-    {
+  // parse for now a non-empty list of expressions
+  expression_list_t *elst = NULL;
+  expression_list_t *last = NULL;
+  schptr_t e;
+  if (!parse_expression (&ptr, &e))
+    return false;
 
+  elst = alloc (sizeof (*elst));
+  elst->expr = e;
+  elst->next = NULL;
+  last = elst;
+
+  (void) parse_whitespace (&ptr);
+
+  while (parse_expression (&ptr, &e))
+    {
+      (void) parse_whitespace (&ptr);
+
+      expression_list_t *n = alloc (sizeof (*n));
+      n->expr = e;
+      n->next = NULL;
+      last->next = n;
+      last = n;
     }
 
-  // TODO build body
+  schexprseq_t *seq = alloc (sizeof (*seq));
+  seq->type = SCH_EXPR_SEQ;
+  seq->seq = elst;
+  *sptr = (schptr_t) seq;
 
   return true;
 }
@@ -772,13 +801,13 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
 
   while (1)
     {
-      schid_t id;
+      schptr_t id;
       schptr_t expr;
       if (!parse_binding_spec (&ptr, &id, &expr))
         break;
 
       binding_spec_list_t *b = alloc (sizeof (*b));
-      b->id = id;
+      b->id = (schid_t *) id;
       b->expr = expr;
       b->next = bindings;
 
@@ -838,19 +867,19 @@ parse_if (const char **input, schptr_t *sptr)
   schptr_t thenv;
   schptr_t elsev;
 
-  if (!parse_expr (&ptr, &condition))
+  if (!parse_expression (&ptr, &condition))
     return false;
 
   // skip whitespace between condition and then-value
   (void) parse_whitespace (&ptr);
 
-  if (!parse_expr (&ptr, &thenv))
+  if (!parse_expression (&ptr, &thenv))
       return false;
 
   // skip whitespace between then-value and else-value
   (void) parse_whitespace (&ptr);
 
-  if (!parse_expr (&ptr, &elsev))
+  if (!parse_expression (&ptr, &elsev))
     return false;
 
   // skip whitespace between else-value and right paren
@@ -1047,7 +1076,7 @@ parse_rparen (const char **input)
 }
 
 bool
-parse_expr (const char **input, schptr_t *sptr)
+parse_expression (const char **input, schptr_t *sptr)
 {
   // An expression is:
   //   * an immediate,
@@ -1104,7 +1133,7 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
     {
       (void) parse_whitespace (&ptr);
 
-      if (!parse_expr (&ptr, &args[i]))
+      if (!parse_expression (&ptr, &args[i]))
         return false;
     }
 
@@ -1839,7 +1868,7 @@ compile (const char *input, const char *output)
   char *s = read_file_to_mem (input);
   schptr_t sptr = 0;
   const char *cs = s;
-  if (!parse_expr (&cs, &sptr))
+  if (!parse_expression (&cs, &sptr))
     err_parse (cs);
 
   // free parsed string
@@ -1895,7 +1924,7 @@ void
 compile_expression (const char *e)
 {
   schptr_t sptr = 0;
-  if (!parse_expr (&e, &sptr))
+  if (!parse_expression (&e, &sptr))
     err_parse (e);
 
   const char *tmpdir = find_system_tmpdir ();
