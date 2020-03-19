@@ -329,6 +329,51 @@ static const schprim_t primitives[] =
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
 
+
+
+///////////////////////////////////////////////////////////////////////
+//
+//  Environment manipulation
+//
+//
+///////////////////////////////////////////////////////////////////////
+
+typedef struct env
+{
+  schid_t *id;
+  size_t si;
+  struct env *next;
+} env_t;
+
+env_t *make_env ()
+{
+  return NULL;
+}
+
+env_t *
+env_add (schid_t *id, size_t si, env_t *env)
+{
+  env_t *e = alloc (sizeof (*e));
+  e->id = id;
+  e->si = si;
+  e->next = env;
+  return e;
+}
+
+bool
+env_ref (schid_t *id, env_t *env, size_t *si)
+{
+  for (env_t *e = env; e; e = e->next)
+    {
+      if (!strcmp (id->name, e->id->name))
+        {
+          *si = e->si;
+          return true;
+        }
+    }
+  return false;
+}
+
 ///////////////////////////////////////////////////////////////////////
 //
 //  ASM utilities
