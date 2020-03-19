@@ -767,6 +767,8 @@ parse_body (const char **input, schptr_t *sptr)
       last = n;
     }
 
+  *input = ptr;
+
   schexprseq_t *seq = alloc (sizeof (*seq));
   seq->type = SCH_EXPR_SEQ;
   seq->seq = elst;
@@ -792,6 +794,8 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
     return false;
 
   // skip possible whitespace between let and lparen
+  (void) parse_whitespace (&ptr);
+
   if (!parse_lparen (&ptr))
     return false;
 
@@ -1087,6 +1091,7 @@ parse_expression (const char **input, schptr_t *sptr)
   if (parse_imm (input, sptr) ||
       parse_prim (input, sptr) ||
       parse_if (input, sptr) ||
+      parse_let_wo_id (input, sptr) ||
       parse_prim1 (input, sptr) ||
       parse_prim2 (input, sptr))
     return true;
