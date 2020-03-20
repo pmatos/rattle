@@ -1280,6 +1280,25 @@ emit_asm_epilogue (FILE *f)
   fprintf (f, "    ret\n");
 }
 
+void
+emit_asm_identifier (FILE *f, schptr_t sptr, env_t *env)
+{
+  schid_t *id = (schid_t *) sptr;
+  assert (id->type == SCH_ID);
+
+  size_t si;
+
+  // get the stack offset where the value of id is.
+  // issue a load from that stack location to obtain it's value and put it in rax
+  if (env_ref (id, env, &si))
+    fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
+  else
+    {
+      fprintf (stderr, "undefined variable: %s\n", id->name);
+      exit (EXIT_FAILURE);
+    }
+}
+
 // EMIT_ASM_IMM
 // Emit assembly for immediates
 void
@@ -1779,6 +1798,7 @@ void
 emit_asm_if (FILE *f, schptr_t p, size_t si)
 {
   schif_t *pif = (schif_t *) p;
+  assert (pif->type == SCH_IF);
 
   char elsel[LABEL_MAX];
   gen_new_temp_label (elsel);
@@ -1797,6 +1817,18 @@ emit_asm_if (FILE *f, schptr_t p, size_t si)
   emit_asm_label (f, elsel);
   emit_asm_expr (f, pif->elsev, si);
   emit_asm_label (f, endl);
+}
+
+void
+emit_asm_let (FILE *f, schptr_tsptr, size_t si, env_t *env)
+{
+  // We have to evaluate all let bindings right hand sides.
+  // Add definitions for all of them into an environment and
+  // emit code for the body of the let with the environment properly
+  // filled.
+  schlet_t *let = (schlet_t *) sptr;
+  assert (let->type == SCH_LET);
+  //TODO
 }
 
 ///////////////////////////////////////////////////////////////////////
