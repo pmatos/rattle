@@ -744,6 +744,7 @@ parse_identifier (const char **input, schptr_t *sptr)
   sid->name = id;
 
   *sptr = (schptr_t) sid;
+  *input = ptr;
   return true;
 }
 
@@ -873,6 +874,9 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
       schptr_t expr;
       if (!parse_binding_spec (&ptr, &id, &expr))
         break;
+
+      // skip possible whitespace between binding specs
+      (void) parse_whitespace (&ptr);
 
       binding_spec_list_t *b = alloc (sizeof (*b));
       b->id = (schid_t *) id;
@@ -1153,6 +1157,7 @@ parse_expression (const char **input, schptr_t *sptr)
   // or a parenthesized expression
 
   if (parse_imm (input, sptr) ||
+      parse_identifier (input, sptr) ||
       parse_prim (input, sptr) ||
       parse_if (input, sptr) ||
       parse_let_wo_id (input, sptr) ||
@@ -1276,6 +1281,7 @@ void emit_asm_prologue (FILE *, const char *);
 void emit_asm_imm (FILE *, schptr_t);
 void emit_asm_if (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_let (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_expr_seq (FILE *, schptr_t, size_t, env_t *);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -1362,8 +1368,14 @@ emit_asm_expr (FILE *f, schptr_t sptr, size_t si, env_t *env)
     case SCH_IF:
       emit_asm_if (f, sptr, si, env);
       break;
+    case SCH_ID:
+      emit_asm_identifier (f, sptr, env);
+      break;
     case SCH_LET:
       emit_asm_let (f, sptr, si, env);
+      break;
+    case SCH_EXPR_SEQ:
+      emit_asm_expr_seq (f, sptr, si, env);
       break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
@@ -1869,6 +1881,17 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
   emit_asm_expr (f, let->body, freesi, env);
 }
 
+void
+emit_asm_expr_seq (FILE *f, schptr_t sptr, size_t si, env_t *env)
+{
+  schexprseq_t *seq = (schexprseq_t *) sptr;
+  assert (seq->type == SCH_EXPR_SEQ);
+
+  expression_list_t *s = seq->seq;
+
+  for (; s; s = s->next)
+    emit_asm_expr (f, s->expr, si, env);
+}
 ///////////////////////////////////////////////////////////////////////
 //
 // Section Compilation and Evaluation
