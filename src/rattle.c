@@ -29,6 +29,7 @@
 #include <dlfcn.h>
 
 #include "common.h"
+#include "config.h"
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
@@ -156,6 +157,13 @@ err_parse (const char *s)
   exit (EXIT_FAILURE);
 }
 
+__attribute__((noreturn)) void
+err_unreachable (const char *s)
+{
+  fprintf (stderr, "error: unreachable - `%s'\n", s);
+  exit (EXIT_FAILURE);
+}
+
 ///////////////////////////////////////////////////////////////////////
 //
 // Section Memory Management
@@ -199,9 +207,10 @@ typedef uint64_t sch_imm;
 
 // Primitives
 struct schprim;
-typedef void (*prim_emmiter) (FILE *, schptr_t, size_t);
+struct env;
+typedef void (*prim_emmiter) (FILE *, schptr_t, size_t, struct env *);
 
-typedef enum { SCH_PRIM, SCH_IF, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_EXPR_SEQ, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
 
 typedef struct schprim
 {
@@ -238,33 +247,121 @@ typedef struct schif
   schptr_t elsev;     // else value
 } schif_t;
 
+typedef struct schid
+{
+  sch_type type;
+  char *name;
+} schid_t;
+
+typedef struct binding_spec_list
+{
+  schid_t *id;
+  schptr_t expr;
+  struct binding_spec_list *next;
+} binding_spec_list_t;
+
+typedef struct schlet
+{
+  sch_type type;
+  binding_spec_list_t *bindings;
+  schptr_t body;
+} schlet_t;
+
+typedef struct expression_list
+{
+  schptr_t expr;
+  struct expression_list *next;
+} expression_list_t;
+
+typedef struct schexprseq
+{
+  sch_type type;
+  expression_list_t *seq;
+} schexprseq_t;
+
+
+///////////////////////////////////////////////////////////////////////
+//
+//  Environment manipulation
+//
+//
+///////////////////////////////////////////////////////////////////////
+
+typedef struct env
+{
+  schid_t *id;
+  size_t si;
+  struct env *next;
+} env_t;
+
+env_t *make_env ()
+{
+  return NULL;
+}
+
+env_t *
+env_add (schid_t *id, size_t si, env_t *env)
+{
+  env_t *e = alloc (sizeof (*e));
+  e->id = id;
+  e->si = si;
+  e->next = env;
+  return e;
+}
+
+env_t *
+env_append (env_t *env1, env_t *env2)
+{
+  if (!env1)
+    return env2;
+
+  env_t *ptr = env1;
+  for (; ptr->next != NULL; ptr = ptr->next);
+  ptr->next = env2;
+  return env1;
+}
+
+bool
+env_ref (schid_t *id, env_t *env, size_t *si)
+{
+  for (env_t *e = env; e; e = e->next)
+    {
+      if (!strcmp (id->name, e->id->name))
+        {
+          *si = e->si;
+          return true;
+        }
+    }
+  return false;
+}
+
 // Primitive emitter prototypes
-void emit_asm_prim_fxadd1 (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxsub1 (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxzerop (FILE *, schptr_t, size_t);
-void emit_asm_prim_char_to_fixnum (FILE *, schptr_t, size_t);
-void emit_asm_prim_fixnum_to_char (FILE *, schptr_t, size_t);
-void emit_asm_prim_nullp (FILE *, schptr_t, size_t);
-void emit_asm_prim_fixnump (FILE *, schptr_t, size_t);
-void emit_asm_prim_booleanp (FILE *, schptr_t, size_t);
-void emit_asm_prim_charp (FILE *, schptr_t, size_t);
-void emit_asm_prim_not (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxlognot (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxadd (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxsub (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxmul (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxlogand (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxlogor (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxeq (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxlt (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxle (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxgt (FILE *, schptr_t, size_t);
-void emit_asm_prim_fxge (FILE *, schptr_t, size_t);
-void emit_asm_prim_chareq (FILE *, schptr_t, size_t);
-void emit_asm_prim_charlt (FILE *, schptr_t, size_t);
-void emit_asm_prim_charle (FILE *, schptr_t, size_t);
-void emit_asm_prim_chargt (FILE *, schptr_t, size_t);
-void emit_asm_prim_charge (FILE *, schptr_t, size_t);
+void emit_asm_prim_fxadd1 (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxsub1 (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxzerop (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_char_to_fixnum (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fixnum_to_char (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_nullp (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fixnump (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_booleanp (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_charp (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_not (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxlognot (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxadd (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxsub (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxmul (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxlogand (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxlogor (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxeq (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxlt (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxle (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxgt (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_fxge (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_chareq (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_charlt (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_charle (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_chargt (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_prim_charge (FILE *, schptr_t, size_t, env_t *);
 
 // Order matter
 static const schprim_t primitives[] =
@@ -321,10 +418,13 @@ gen_new_temp_label (char *str)
 //
 ///////////////////////////////////////////////////////////////////////
 
+// Main parsing procedures
+
+bool parse_identifier (const char **, schptr_t *);
 bool parse_prim (const char **, schptr_t *);
 bool parse_prim1 (const char **, schptr_t *);
 bool parse_prim2 (const char **, schptr_t *);
-bool parse_expr (const char **, schptr_t *);
+bool parse_expression (const char **, schptr_t *);
 bool parse_imm (const char **, schptr_t *);
 bool parse_imm_bool (const char **, schptr_t *);
 bool parse_imm_null (const char **, schptr_t *);
@@ -332,7 +432,17 @@ bool parse_imm_fixnum (const char **, schptr_t *);
 bool parse_imm_char (const char **, schptr_t *);
 bool parse_if (const char **, schptr_t *);
 
+
+// Helper parsing procedures
+
+bool parse_initial (const char **);
+bool parse_letter (const char **);
+bool parse_special_initial (const char **);
+bool parse_subsequent (const char **);
+bool parse_digit (const char **);
+
 bool parse_char (const char **, char);
+bool parse_char_sequence (const char **, const char *);
 bool parse_lparen (const char **);
 bool parse_rparen (const char **);
 bool parse_whitespace (const char **);
@@ -347,6 +457,468 @@ parse_whitespace (const char **input)
 }
 
 bool
+parse_letter (const char **input)
+{
+  char i = **input;
+
+  if ((i >= 'a' && i <= 'z') ||
+      (i >= 'A' && i <= 'Z'))
+    {
+      (*input)++;
+      return true;
+    }
+
+  return false;
+}
+
+bool
+parse_special_initial (const char **input)
+{
+  char i = **input;
+
+  switch (i)
+    {
+    case '!':
+    case '$':
+    case '%':
+    case '&':
+    case '*':
+    case '/':
+    case ':':
+    case '<':
+    case '=':
+    case '>':
+    case '?':
+    case '^':
+    case '_':
+    case '~':
+      (*input)++;
+      return true;
+    }
+
+  return false;
+}
+
+bool
+parse_initial (const char **input)
+{
+  // Parses an expression as follows:
+  //   <letter>
+  // | <special initial>
+  return parse_letter (input) || parse_special_initial (input);
+}
+
+bool
+parse_explicit_sign (const char **input)
+{
+  // Parses an expression as follows:
+  // + | -
+  return parse_char (input, '+') || parse_char (input, '-');
+}
+
+bool
+parse_special_subsequent (const char **input)
+{
+  // Parses an expression as follows:
+  //   <explicit sign>
+  // | .
+  // | @
+  return parse_explicit_sign (input)
+    || parse_char (input, '.')
+    || parse_char (input, '@');
+}
+
+bool
+parse_digit (const char **input)
+{
+  switch (**input)
+    {
+    case '0':
+    case '1':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      (*input)++;
+      return true;
+    }
+  return false;
+}
+
+bool
+parse_subsequent (const char **input)
+{
+  // Parses an expression as follows:
+  //    <initial>
+  // |  <digit>
+  // |  <special subsequent>
+  return parse_initial (input)
+    || parse_digit (input)
+    || parse_special_subsequent (input);
+}
+
+bool
+parse_vertical_line (const char **input)
+{
+  return parse_char (input, '|');
+}
+
+bool
+parse_char_sequence (const char **input, const char *seq)
+{
+  if (!strncmp (*input, seq, strlen (seq)))
+    {
+      (*input) += strlen (seq);
+      return true;
+    }
+  return false;
+}
+
+bool
+parse_hex_digit (const char **input)
+{
+  switch (**input)
+    {
+    case 'a':
+    case 'b':
+    case 'c':
+    case 'd':
+    case 'e':
+    case 'f':
+      (*input)++;
+      return true;
+    }
+
+  return parse_digit (input);
+}
+
+bool
+parse_hex_scalar_value (const char **input)
+{
+  // Parses an expression as follows:
+  // <hex digit> +
+  if (!parse_hex_digit (input))
+    return false;
+
+  while (parse_hex_digit (input));
+  return true;
+}
+
+bool
+parse_inline_hex_escape (const char **input)
+{
+  // Parses an expression as follows:
+  // \x <hex scalar value>
+  return parse_char_sequence (input, "\\x") && parse_hex_scalar_value(input);
+}
+
+bool
+parse_mnemonic_escape (const char **input)
+{
+  return parse_char_sequence (input, "\\a")
+    || parse_char_sequence (input, "\\b")
+    || parse_char_sequence (input, "\\t")
+    || parse_char_sequence (input, "\\n")
+    || parse_char_sequence (input, "\\r");
+}
+
+bool
+parse_symbol_element (const char **input)
+{
+  // Parses an expression as follows:
+  // <any char other than <vertical line> or \>
+  // | <inline hex escape>
+  // | <mnemonic excape>
+  // | \|
+
+  if (**input != '|' && **input != '\\')
+    {
+      (*input)++;
+      return true;
+    }
+  else if ((*input)[0] == '\\' && (*input)[1] == '|')
+    {
+      (*input) += 2;
+      return true;
+    }
+  else
+    return parse_inline_hex_escape (input)
+      || parse_mnemonic_escape (input);
+}
+
+bool
+parse_sign_subsequent (const char **input)
+{
+  // Parses an expression as follows:
+  // <initial>
+  // | <explicit sign>
+  // | @
+  return parse_initial (input)
+    || parse_explicit_sign (input)
+    || parse_char (input, '@');
+}
+
+bool
+parse_dot_subsequent (const char **input)
+{
+  return parse_sign_subsequent (input) || parse_char (input, '.');
+}
+
+bool
+parse_peculiar_identifier (const char **input)
+{
+  const char *ptr = *input;
+
+  // Parses an expression as follows:
+  //   <explicit sign>
+  // | <explicit sign> <sign subsequent> <subsequent>*
+  // | <explicit sign> . <dot subsequent> <subsequent>*
+  // | . <dot subsequent> <subsequent>*
+  if (parse_explicit_sign (&ptr) &&
+      parse_sign_subsequent (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      *input = ptr;
+      return true;
+    }
+  else if (parse_explicit_sign (&ptr) &&
+           parse_char (&ptr, '.') &&
+           parse_dot_subsequent (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      *input = ptr;
+      return true;
+    }
+  else if (parse_char (&ptr, '.') &&
+           parse_dot_subsequent (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      *input = ptr;
+      return true;
+    }
+  else if (parse_explicit_sign (&ptr))
+    {
+      *input = ptr;
+      return true;
+    }
+
+  return false;
+}
+
+bool
+parse_identifier (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+  char *id = NULL;
+
+  // Parses an expression as follows:
+  //    <initial> <subsequent>*
+  // |  <vertical line> <symbol element>* <vertical line>
+  // |  <peculiar identifier>
+  if (parse_initial (&ptr))
+    {
+      while (parse_subsequent (&ptr));
+      id = strndup (*input, ptr - *input);
+    }
+  else if (parse_vertical_line (&ptr))
+    {
+      while (parse_symbol_element (&ptr));
+      if (parse_vertical_line (&ptr))
+        id = strndup (*input, ptr - *input);
+    }
+  else if (parse_peculiar_identifier (&ptr))
+    id = strndup (*input, ptr - *input);
+
+  if (!id)
+    return false;
+
+  // Successfully parsed an identifier so we can now create it
+  schid_t *sid = (schid_t *) alloc (sizeof *sid);
+  if (!sid)
+    err_oom ();
+
+  sid->type = SCH_ID;
+  sid->name = id;
+
+  *sptr = (schptr_t) sid;
+  *input = ptr;
+  return true;
+}
+
+bool
+parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
+{
+  const char *ptr = *input;
+
+  // Parses an expression as follows:
+  // (<identifier> <expression>)
+  if (!parse_lparen(&ptr))
+    return false;
+
+  // skip possible whitespace between lparen and the identifier
+  (void) parse_whitespace (&ptr);
+
+  schptr_t identifier;
+  if (!parse_identifier (&ptr, &identifier))
+    return false;
+
+  // skip possible whitespace between identifier and expression
+  (void) parse_whitespace (&ptr);
+
+  schptr_t expression;
+  if (!parse_expression (&ptr, &expression))
+    return false;
+
+  // skip possible whitespace between expression and rparen
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  *input = ptr;
+
+  *left = identifier;
+  *right = expression;
+
+  return true;
+}
+
+/* bool */
+/* parse_definition (const char **input, schptr_t *sptr) */
+/* { */
+/*   return false; */
+/* } */
+
+bool
+parse_body (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  // a body is a sequence of definitions followed by a
+  // non empty sequence of expressions
+  // TODO skipping definitions for now
+  /* definition_list_t *defs = NULL; */
+  /* definition_t def; */
+  /* while (parse_definition (ptr, *def)) */
+  /*   { */
+
+  /*   } */
+
+  // parse for now a non-empty list of expressions
+  expression_list_t *elst = NULL;
+  expression_list_t *last = NULL;
+  schptr_t e;
+  if (!parse_expression (&ptr, &e))
+    return false;
+
+  elst = alloc (sizeof (*elst));
+  elst->expr = e;
+  elst->next = NULL;
+  last = elst;
+
+  (void) parse_whitespace (&ptr);
+
+  while (parse_expression (&ptr, &e))
+    {
+      (void) parse_whitespace (&ptr);
+
+      expression_list_t *n = alloc (sizeof (*n));
+      n->expr = e;
+      n->next = NULL;
+      last->next = n;
+      last = n;
+    }
+
+  *input = ptr;
+
+  schexprseq_t *seq = alloc (sizeof (*seq));
+  seq->type = SCH_EXPR_SEQ;
+  seq->seq = elst;
+  *sptr = (schptr_t) seq;
+
+  return true;
+}
+
+bool
+parse_let_wo_id (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  // Parses an expression as follows:
+  // (let (<binding spec>*) <body>)
+  if (!parse_lparen (&ptr))
+    return false;
+
+  // skip possible whitespace between lparen and let keyword
+  (void) parse_whitespace (&ptr);
+
+  if (! parse_char_sequence (&ptr, "let"))
+    return false;
+
+  // skip possible whitespace between let and lparen
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_lparen (&ptr))
+    return false;
+
+  // Now we parse each of the binding specs and store them
+  binding_spec_list_t *bindings = NULL;
+  schptr_t body;
+
+  while (1)
+    {
+      schptr_t id;
+      schptr_t expr;
+      if (!parse_binding_spec (&ptr, &id, &expr))
+        break;
+
+      // skip possible whitespace between binding specs
+      (void) parse_whitespace (&ptr);
+
+      binding_spec_list_t *b = alloc (sizeof (*b));
+      b->id = (schid_t *) id;
+      b->expr = expr;
+      b->next = bindings;
+
+      bindings = b;
+    }
+
+  // skip possible whitespace between last binding spec and rparen
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  // skip possible whitespace between rparen and body
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_body (&ptr, &body))
+    return false;
+
+  // skip possible whitespace between body and rparen
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  // Parse of let successful and complete
+  *input = ptr;
+
+  schlet_t *l = (schlet_t *) alloc (sizeof (*l));
+  l->type = SCH_LET;
+  l->bindings = bindings;
+  l->body = body;
+
+  *sptr = (schptr_t) l;
+
+  return true;
+}
+
+bool
 parse_if (const char **input, schptr_t *sptr)
 {
   const char *ptr = *input;
@@ -355,12 +927,11 @@ parse_if (const char **input, schptr_t *sptr)
   if (!parse_lparen (&ptr))
     return false;
 
-  // skip possible whilespace between lparen and if identifier
+  // skip possible whitespace between lparen and if keyword
   (void) parse_whitespace (&ptr);
 
-  if (ptr[0] != 'i' || ptr[1] != 'f')
+  if (! parse_char_sequence (&ptr, "if"))
     return false;
-  ptr += 2;
 
   // skip whitespace between if identifier and condition
   (void) parse_whitespace (&ptr);
@@ -369,19 +940,19 @@ parse_if (const char **input, schptr_t *sptr)
   schptr_t thenv;
   schptr_t elsev;
 
-  if (!parse_expr (&ptr, &condition))
+  if (!parse_expression (&ptr, &condition))
     return false;
 
   // skip whitespace between condition and then-value
   (void) parse_whitespace (&ptr);
 
-  if (!parse_expr (&ptr, &thenv))
+  if (!parse_expression (&ptr, &thenv))
       return false;
 
   // skip whitespace between then-value and else-value
   (void) parse_whitespace (&ptr);
 
-  if (!parse_expr (&ptr, &elsev))
+  if (!parse_expression (&ptr, &elsev))
     return false;
 
   // skip whitespace between else-value and right paren
@@ -578,7 +1149,7 @@ parse_rparen (const char **input)
 }
 
 bool
-parse_expr (const char **input, schptr_t *sptr)
+parse_expression (const char **input, schptr_t *sptr)
 {
   // An expression is:
   //   * an immediate,
@@ -587,8 +1158,10 @@ parse_expr (const char **input, schptr_t *sptr)
   // or a parenthesized expression
 
   if (parse_imm (input, sptr) ||
+      parse_identifier (input, sptr) ||
       parse_prim (input, sptr) ||
       parse_if (input, sptr) ||
+      parse_let_wo_id (input, sptr) ||
       parse_prim1 (input, sptr) ||
       parse_prim2 (input, sptr))
     return true;
@@ -635,7 +1208,7 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
     {
       (void) parse_whitespace (&ptr);
 
-      if (!parse_expr (&ptr, &args[i]))
+      if (!parse_expression (&ptr, &args[i]))
         return false;
     }
 
@@ -667,7 +1240,7 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
       }
       break;
     default:
-      assert (false); // unreachable
+      err_unreachable ("unhandled number of args for primitive");
       break;
     }
 
@@ -707,7 +1280,9 @@ parse_prim2 (const char **input, schptr_t *sptr)
 void emit_asm_epilogue (FILE *);
 void emit_asm_prologue (FILE *, const char *);
 void emit_asm_imm (FILE *, schptr_t);
-void emit_asm_if (FILE *, schptr_t, size_t);
+void emit_asm_if (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_let (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_expr_seq (FILE *, schptr_t, size_t, env_t *);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -732,6 +1307,25 @@ emit_asm_epilogue (FILE *f)
   fprintf (f, "    ret\n");
 }
 
+void
+emit_asm_identifier (FILE *f, schptr_t sptr, env_t *env)
+{
+  schid_t *id = (schid_t *) sptr;
+  assert (id->type == SCH_ID);
+
+  size_t si;
+
+  // get the stack offset where the value of id is.
+  // issue a load from that stack location to obtain it's value and put it in rax
+  if (env_ref (id, env, &si))
+    fprintf (f, "    movq   -%zu(%%rsp), %%rax\n", si);
+  else
+    {
+      fprintf (stderr, "undefined variable: %s\n", id->name);
+      exit (EXIT_FAILURE);
+    }
+}
+
 // EMIT_ASM_IMM
 // Emit assembly for immediates
 void
@@ -744,14 +1338,14 @@ emit_asm_imm (FILE *f, schptr_t imm)
 }
 
 void
-emit_asm_prim (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval_t *pe = (schprim_eval_t *)sptr;
-  pe->prim->emitter (f, sptr, si);
+  pe->prim->emitter (f, sptr, si, env);
 }
 
 void
-emit_asm_expr (FILE *f, schptr_t sptr, size_t si)
+emit_asm_expr (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   if (sch_imm_p (sptr))
     {
@@ -770,47 +1364,56 @@ emit_asm_expr (FILE *f, schptr_t sptr, size_t si)
       break;
     case SCH_PRIM_EVAL1:
     case SCH_PRIM_EVAL2:
-      emit_asm_prim (f, sptr, si);
+      emit_asm_prim (f, sptr, si, env);
       break;
     case SCH_IF:
-      emit_asm_if (f, sptr, si);
+      emit_asm_if (f, sptr, si, env);
+      break;
+    case SCH_ID:
+      emit_asm_identifier (f, sptr, env);
+      break;
+    case SCH_LET:
+      emit_asm_let (f, sptr, si, env);
+      break;
+    case SCH_EXPR_SEQ:
+      emit_asm_expr_seq (f, sptr, si, env);
       break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
-      assert (false); // unreachable
+      err_unreachable ("unknown type");
       break;
     }
 }
 
 // Primitives Emitter
 void
-emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   const uint64_t cst = UINT64_C(1) << FX_SHIFT;
   fprintf (f, "    addq $%" PRIu64", %%rax\n", cst);
 }
 
 void
-emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   const uint64_t cst = UINT64_C(1) << FX_SHIFT;
   fprintf (f, "    subq $%" PRIu64 ", %%rax\n", cst);
 }
 
 void
-emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   fprintf (f, "    movl   $%" PRIu64 ", %%edx\n", FALSE_CST);
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FX_TAG);
@@ -819,11 +1422,11 @@ emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
@@ -832,11 +1435,11 @@ emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
@@ -845,11 +1448,11 @@ emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", FX_MASK);
@@ -861,11 +1464,11 @@ emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", BOOL_MASK);
@@ -882,11 +1485,11 @@ emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si)
 //      in condi-tional expressions.  All other Scheme
 //      values, including#t,count as true."
 void
-emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // I *don't* think this one can be optimized by fixing the values
   fprintf (f, "    movq    $%" PRIu64 ", %%rdx\n", FALSE_CST);
@@ -896,11 +1499,11 @@ emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", CHAR_MASK);
@@ -911,11 +1514,11 @@ emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si)
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 void
-emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // I *don't* think this one can be optimized by fixing the values
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", NULL_CST);
@@ -926,11 +1529,11 @@ emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
-  emit_asm_expr (f, pe->arg1, si);
+  emit_asm_expr (f, pe->arg1, si, env);
 
   // This can be improved if we set the tags, masks and shifts in stone
   fprintf (f, "    notq   %%rax\n");
@@ -939,34 +1542,34 @@ emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    xorq   $%" PRIu64 ", %%rax\n", FX_MASK);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    addq   -%zu(%%rsp), %%rax\n", si);
 }
 
 void
-emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    movq   %%rax, %%r8\n");
   fprintf (f, "    movq   -%zu(%%rsp), %%rax\n", si);
@@ -976,18 +1579,18 @@ emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxmul (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxmul (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    imulq  -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", FX_SHIFT);
@@ -995,47 +1598,47 @@ emit_asm_prim_fxmul (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxlogand (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxlogand (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    andq   -%zu(%%rsp), %%rax\n", si);
 }
 
 void
-emit_asm_prim_fxlogor (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxlogor (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    orq   -%zu(%%rsp), %%rax\n", si);
 }
 
 void
-emit_asm_prim_fxeq (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxeq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    movq      $%" PRIu64 ", %%rdx\n", FALSE_CST);
   fprintf (f, "    movabsq   $%" PRIu64 ", %%rax\n", TRUE_CST);
@@ -1043,17 +1646,17 @@ emit_asm_prim_fxeq (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxlt (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxlt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", FX_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1063,17 +1666,17 @@ emit_asm_prim_fxlt (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxle (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxle (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", FX_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1083,17 +1686,17 @@ emit_asm_prim_fxle (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxgt (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxgt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", FX_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1103,17 +1706,17 @@ emit_asm_prim_fxgt (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_fxge (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_fxge (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", FX_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", FX_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1123,17 +1726,17 @@ emit_asm_prim_fxge (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_chareq (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_chareq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
   fprintf (f, "    movq      $%" PRIu64 ", %%rdx\n", FALSE_CST);
   fprintf (f, "    movabsq   $%" PRIu64 ", %%rax\n", TRUE_CST);
@@ -1141,17 +1744,17 @@ emit_asm_prim_chareq (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_charlt (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_charlt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", CHAR_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1161,17 +1764,17 @@ emit_asm_prim_charlt (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_charle (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_charle (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", CHAR_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1181,17 +1784,17 @@ emit_asm_prim_charle (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_chargt (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_chargt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", CHAR_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1201,17 +1804,17 @@ emit_asm_prim_chargt (FILE *f, schptr_t sptr, size_t si)
 }
 
 void
-emit_asm_prim_charge (FILE *f, schptr_t sptr, size_t si)
+emit_asm_prim_charge (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
-  emit_asm_expr (f, arg1, si);
+  emit_asm_expr (f, arg1, si, env);
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    sarq      $%" PRIu8 ", -%zu(%%rsp)\n", CHAR_SHIFT, si);
   fprintf (f, "    sarq      $%" PRIu8 ", %%rax\n", CHAR_SHIFT);
   fprintf (f, "    cmpq      -%zu(%%rsp), %%rax\n", si);
@@ -1228,9 +1831,10 @@ emit_asm_label (FILE *f, char *label)
 
 // Emitting asm for conditional
 void
-emit_asm_if (FILE *f, schptr_t p, size_t si)
+emit_asm_if (FILE *f, schptr_t p, size_t si, env_t *env)
 {
   schif_t *pif = (schif_t *) p;
+  assert (pif->type == SCH_IF);
 
   char elsel[LABEL_MAX];
   gen_new_temp_label (elsel);
@@ -1239,18 +1843,56 @@ emit_asm_if (FILE *f, schptr_t p, size_t si)
   gen_new_temp_label (endl);
 
 
-  emit_asm_expr (f, pif->condition, si);
+  emit_asm_expr (f, pif->condition, si, env);
 
   // Check if boolean value is true of false and jump accordingly
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", FALSE_CST);
   fprintf (f, "    je     %s\n", elsel);
-  emit_asm_expr (f, pif->thenv, si);
+  emit_asm_expr (f, pif->thenv, si, env);
   fprintf (f, "    jmp    %s\n", endl);
   emit_asm_label (f, elsel);
-  emit_asm_expr (f, pif->elsev, si);
+  emit_asm_expr (f, pif->elsev, si, env);
   emit_asm_label (f, endl);
 }
 
+void
+emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
+{
+  // We have to evaluate all let bindings right hand sides.
+  // Add definitions for all of them into an environment and
+  // emit code for the body of the let with the environment properly
+  // filled.
+  schlet_t *let = (schlet_t *) sptr;
+  assert (let->type == SCH_LET);
+
+  // Evaluate each of the bindings in the bindings list
+  env_t *nenv = make_env ();
+  size_t freesi = si; // currently free si
+  for (binding_spec_list_t *bs = let->bindings; bs != NULL; bs = bs->next)
+    {
+      emit_asm_expr (f, bs->expr, freesi, env);
+
+      fprintf (f, "    movq %%rax, -%zu(%%rsp)\n", freesi);
+
+      nenv = env_add (bs->id, freesi, nenv);
+      freesi += WORD_BYTES;
+    }
+
+  env = env_append (nenv, env);
+  emit_asm_expr (f, let->body, freesi, env);
+}
+
+void
+emit_asm_expr_seq (FILE *f, schptr_t sptr, size_t si, env_t *env)
+{
+  schexprseq_t *seq = (schexprseq_t *) sptr;
+  assert (seq->type == SCH_EXPR_SEQ);
+
+  expression_list_t *s = seq->seq;
+
+  for (; s; s = s->next)
+    emit_asm_expr (f, s->expr, si, env);
+}
 ///////////////////////////////////////////////////////////////////////
 //
 // Section Compilation and Evaluation
@@ -1295,7 +1937,7 @@ output_asm (schptr_t sptr)
 
   // write asm file
   emit_asm_prologue (i, "L_scheme_entry");
-  emit_asm_expr (i, sptr, WORD_BYTES);
+  emit_asm_expr (i, sptr, WORD_BYTES, make_env ());
   emit_asm_epilogue (i);
 
   // scheme entry received one argument in %rdi,
@@ -1370,7 +2012,7 @@ compile (const char *input, const char *output)
   char *s = read_file_to_mem (input);
   schptr_t sptr = 0;
   const char *cs = s;
-  if (!parse_expr (&cs, &sptr))
+  if (!parse_expression (&cs, &sptr))
     err_parse (cs);
 
   // free parsed string
@@ -1385,7 +2027,11 @@ compile (const char *input, const char *output)
     if (child == 0)
       {
         // inside child
+#ifdef UBSANLIB
+        execl (CC, CC, "-o", output, asmtmp, "runtime.o", UBSANLIB, (char *) NULL);
+#else
         execl (CC, CC, "-o", output, asmtmp, "runtime.o", (char *) NULL);
+#endif
 
         // unreachable
         assert (false);
@@ -1426,7 +2072,7 @@ void
 compile_expression (const char *e)
 {
   schptr_t sptr = 0;
-  if (!parse_expr (&e, &sptr))
+  if (!parse_expression (&e, &sptr))
     err_parse (e);
 
   const char *tmpdir = find_system_tmpdir ();
