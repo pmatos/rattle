@@ -41,9 +41,9 @@ CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
 SRCS = src/rattle.c
 depend: .depend
 
-.depend: $(SRCS)
+.depend: $(SRCS) config.h
 	rm -f ./.depend
-	$(CC) $(CFLAGS) -MM $^ -I. -MF ./.depend
+	$(CC) $(CFLAGS) -MM $(SRCS) -I. -MF ./.depend
 
 include .depend
 
@@ -79,4 +79,4 @@ tests:
 
 .PHONY: clean
 clean:
-	$(RM) rattle runtime.o rattle.o config.h
+	$(RM) rattle runtime.o rattle.o config.h .depend
