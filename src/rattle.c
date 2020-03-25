@@ -1878,7 +1878,7 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
     }
 
   env = env_append (nenv, env);
-  emit_asm_expr (f, let->body, si, env);
+  emit_asm_expr (f, let->body, freesi, env);
 }
 
 void
