@@ -29,6 +29,7 @@
 #include <dlfcn.h>
 
 #include "common.h"
+#include "config.h"
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR 1
@@ -2026,7 +2027,11 @@ compile (const char *input, const char *output)
     if (child == 0)
       {
         // inside child
+#ifdef UBSANLIB
+        execl (CC, CC, "-o", output, asmtmp, "runtime.o", UBSANLIB, (char *) NULL);
+#else
         execl (CC, CC, "-o", output, asmtmp, "runtime.o", (char *) NULL);
+#endif
 
         // unreachable
         assert (false);

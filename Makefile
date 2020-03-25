@@ -20,6 +20,7 @@ LDFLAGS := $(LDFLAGS)
 ifdef UBSAN
 CFLAGS := $(CFLAGS) -fsanitize=undefined
 LDFLAGS := $(LDFLAGS) -fsanitize=undefined
+UBSANLIB :="-lubsan"
 endif
 
 else ifdef COVERAGE	
@@ -42,18 +43,26 @@ depend: .depend
 
 .depend: $(SRCS)
 	rm -f ./.depend
-	$(CC) $(CFLAGS) -MM $^ -MF ./.depend
+	$(CC) $(CFLAGS) -MM $^ -I. -MF ./.depend
 
 include .depend
 
 # Rules
-rattle.o: $(SRCS)
-	$(CC) $(CPPFLAGS) $(CFLAGS) $(EXTRA_CFLAGS) -c $(SRCS) -o $@
+rattle.o: $(SRCS) config.h
+	$(CC) $(CPPFLAGS) -I. $(CFLAGS) $(EXTRA_CFLAGS) -c $(SRCS) -o $@
 rattle: rattle.o
 	$(CC) $^ -o $@ $(LDFLAGS)
 
 runtime.o: src/runtime.c
 	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+
+config.h:
+	echo '#pragma once' > $@
+ifdef UBSAN
+	echo "#define UBSANLIB \"$(UBSANLIB)\"" >> $@
+else
+	echo "/* #define UBSANLIB */" >> $@
+endif
 
 .PHONY: tests
 tests:
@@ -70,4 +79,4 @@ tests:
 
 .PHONY: clean
 clean:
-	$(RM) rattle runtime.o rattle.o
+	$(RM) rattle runtime.o rattle.o config.h
