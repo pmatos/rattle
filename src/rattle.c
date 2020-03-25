@@ -271,6 +271,62 @@ typedef struct schexprseq
   expression_list_t *seq;
 } schexprseq_t;
 
+
+///////////////////////////////////////////////////////////////////////
+//
+//  Environment manipulation
+//
+//
+///////////////////////////////////////////////////////////////////////
+
+typedef struct env
+{
+  schid_t *id;
+  size_t si;
+  struct env *next;
+} env_t;
+
+env_t *make_env ()
+{
+  return NULL;
+}
+
+env_t *
+env_add (schid_t *id, size_t si, env_t *env)
+{
+  env_t *e = alloc (sizeof (*e));
+  e->id = id;
+  e->si = si;
+  e->next = env;
+  return e;
+}
+
+env_t *
+env_append (env_t *env1, env_t *env2)
+{
+  if (!env1)
+    return env2;
+
+  env_t *ptr = env1;
+  for (; ptr->next != NULL; ptr = ptr->next);
+  ptr->next = env2;
+  return env1;
+}
+
+bool
+env_ref (schid_t *id, env_t *env, size_t *si)
+{
+  for (env_t *e = env; e; e = e->next)
+    {
+      if (!strcmp (id->name, e->id->name))
+        {
+          *si = e->si;
+          return true;
+        }
+    }
+  return false;
+}
+
 // Primitive emitter prototypes
 void emit_asm_prim_fxadd1 (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_prim_fxsub1 (FILE *, schptr_t, size_t, env_t *);
@@ -329,51 +385,6 @@ static const schprim_t primitives[] =
     { SCH_PRIM, "char>", 2, emit_asm_prim_chargt }
   };
 static const size_t primitives_count = sizeof(primitives)/sizeof(primitives[0]);
-
-
-
-///////////////////////////////////////////////////////////////////////
-//
-//  Environment manipulation
-//
-//
-///////////////////////////////////////////////////////////////////////
-
-typedef struct env
-{
-  schid_t *id;
-  size_t si;
-  struct env *next;
-} env_t;
-
-env_t *make_env ()
-{
-  return NULL;
-}
-
-env_t *
-env_add (schid_t *id, size_t si, env_t *env)
-{
-  env_t *e = alloc (sizeof (*e));
-  e->id = id;
-  e->si = si;
-  e->next = env;
-  return e;
-}
-
-bool
-env_ref (schid_t *id, env_t *env, size_t *si)
-{
-  for (env_t *e = env; e; e = e->next)
-    {
-      if (!strcmp (id->name, e->id->name))
-        {
-          *si = e->si;
-          return true;
-        }
-    }
-  return false;
-}
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -1256,7 +1267,8 @@ parse_prim2 (const char **input, schptr_t *sptr)
 void emit_asm_epilogue (FILE *);
 void emit_asm_prologue (FILE *, const char *);
 void emit_asm_imm (FILE *, schptr_t);
-void emit_asm_if (FILE *, schptr_t, size_t);
+void emit_asm_if (FILE *, schptr_t, size_t, env_t *);
+void emit_asm_let (FILE *, schptr_t, size_t, env_t *);
 
 // Emit assembly for function decorations - prologue and epilogue
 void
@@ -1342,6 +1354,9 @@ emit_asm_expr (FILE *f, schptr_t sptr, size_t si, env_t *env)
       break;
     case SCH_IF:
       emit_asm_if (f, sptr, si, env);
+      break;
+    case SCH_LET:
+      emit_asm_let (f, sptr, si, env);
       break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
@@ -1518,7 +1533,7 @@ emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si, env_t *env)
   fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
 
   schptr_t arg2 = pe->arg2;
-  emit_asm_expr (f, arg2, si + WORD_BYTES);
+  emit_asm_expr (f, arg2, si + WORD_BYTES, env);
   fprintf (f, "    addq   -%zu(%%rsp), %%rax\n", si);
 }
 
@@ -1821,7 +1836,7 @@ emit_asm_if (FILE *f, schptr_t p, size_t si, env_t *env)
 }
 
 void
-emit_asm_let (FILE *f, schptr_tsptr, size_t si, env_t *env)
+emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   // We have to evaluate all let bindings right hand sides.
   // Add definitions for all of them into an environment and
@@ -1829,7 +1844,22 @@ emit_asm_let (FILE *f, schptr_tsptr, size_t si, env_t *env)
   // filled.
   schlet_t *let = (schlet_t *) sptr;
   assert (let->type == SCH_LET);
-  
+
+  // Evaluate each of the bindings in the bindings list
+  env_t *nenv = make_env ();
+  size_t freesi = si; // currently free si
+  for (binding_spec_list_t *bs = let->bindings; bs != NULL; bs = bs->next)
+    {
+      emit_asm_expr (f, bs->expr, freesi, env);
+
+      fprintf (f, "    movq %%rax, -%zu(%%rsp)\n", freesi);
+
+      nenv = env_add (bs->id, freesi, nenv);
+      freesi += WORD_BYTES;
+    }
+
+  env = env_append (nenv, env);
+  emit_asm_expr (f, let->body, freesi, env);
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1876,7 +1906,7 @@ output_asm (schptr_t sptr)
 
   // write asm file
   emit_asm_prologue (i, "L_scheme_entry");
-  emit_asm_expr (i, sptr, WORD_BYTES);
+  emit_asm_expr (i, sptr, WORD_BYTES, make_env ());
   emit_asm_epilogue (i);
 
   // scheme entry received one argument in %rdi,
