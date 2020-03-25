@@ -1317,7 +1317,7 @@ emit_asm_identifier (FILE *f, schptr_t sptr, env_t *env)
   // get the stack offset where the value of id is.
   // issue a load from that stack location to obtain it's value and put it in rax
   if (env_ref (id, env, &si))
-    fprintf (f, "    movq   %%rax, -%zu(%%rsp)\n", si);
+    fprintf (f, "    movq   -%zu(%%rsp), %%rax\n", si);
   else
     {
       fprintf (stderr, "undefined variable: %s\n", id->name);
@@ -1878,7 +1878,7 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
     }
 
   env = env_append (nenv, env);
-  emit_asm_expr (f, let->body, freesi, env);
+  emit_asm_expr (f, let->body, si, env);
 }
 
 void
