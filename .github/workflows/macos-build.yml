@@ -21,15 +21,5 @@ jobs:
         distribution: 'full'
         variant: 'CS'
         version: '7.6'
-    - name: Test null
-      run: racket tests/script/test.rkt -c "./rattle -e --" tests/null.tests
-    - name: Test fixnums
-      run: racket tests/script/test.rkt -c "./rattle -e --" tests/fixnum.tests
-    - name: Test booleans
-      run: racket tests/script/test.rkt -c "./rattle -e --" tests/boolean.tests
-    - name: Test characters
-      run: racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
-    - name: Test primitives
-      run: racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
-    - name: Test if
-      run: racket tests/script/test.rkt -c "./rattle -e --" tests/if.tests
+    - name: Run Tests
+      run: make tests
