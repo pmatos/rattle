@@ -156,6 +156,13 @@ err_parse (const char *s)
   exit (EXIT_FAILURE);
 }
 
+__attribute__((noreturn)) void
+err_unreachable (const char *s)
+{
+  fprintf (stderr, "error: unreachable - `%s'\n", s);
+  exit (EXIT_FAILURE);
+}
+
 ///////////////////////////////////////////////////////////////////////
 //
 // Section Memory Management
@@ -1227,7 +1234,7 @@ parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
       }
       break;
     default:
-      assert (false); // unreachable
+      err_unreachable ("unhandled number of args for primitive");
       break;
     }
 
@@ -1360,7 +1367,7 @@ emit_asm_expr (FILE *f, schptr_t sptr, size_t si, env_t *env)
       break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
-      assert (false); // unreachable
+      err_unreachable ("unknown type");
       break;
     }
 }
