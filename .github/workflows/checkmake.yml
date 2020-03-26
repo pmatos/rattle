@@ -3,7 +3,7 @@ name: CheckMake
 on: [push, pull_request]
 
 env:
-  GOPATH: $HOME/go
+  GOPATH: /root/go
 
 jobs:
   checkmake:
