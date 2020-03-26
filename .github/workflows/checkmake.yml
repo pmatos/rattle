@@ -6,7 +6,7 @@ env:
   GOPATH: $HOME/go
 
 jobs:
-  cppcheck:
+  checkmake:
 
     runs-on: ubuntu-latest
     container: debian:buster-slim
