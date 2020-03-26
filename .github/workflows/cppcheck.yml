@@ -17,7 +17,7 @@ jobs:
     - name: Check
       run: |
         cppcheck --enable=all --suppress=missingIncludeSystem -I. -Isrc/ -q src/rattle.c &> cppcheck.log
-        [ -z "cppcheck.log"] || false
+        [ -z "cppcheck.log" ] || false
     - uses: actions/upload-artifact@master
       with:
         path: cppcheck.log
