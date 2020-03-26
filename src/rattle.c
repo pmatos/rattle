@@ -1241,14 +1241,36 @@ parse_expression (const char **input, schptr_t *sptr)
 
   if (parse_imm (input, sptr) ||
       parse_identifier (input, sptr) ||
-      parse_prim (input, sptr) ||
       parse_if (input, sptr) ||
       parse_let_wo_id (input, sptr) ||
-      parse_prim1 (input, sptr) ||
-      parse_prim2 (input, sptr))
+      parse_procedure_call (input, sptr))
     return true;
 
   return false;
+}
+
+bool
+parse_procedure_call (const char **input, schptr_t *sptr)
+{
+  // Syntax:
+  // <procedure call> ->
+  //          ( <operator> <operand>* )
+
+  if (!parse_lparen (input, sptr))
+    return false;
+
+  (void) parse_whitespace (input, sptr);
+
+  if (!parse_operator (input))
+    return false;
+
+  // Parse zero or more arguments : the operands
+  while (parse_operand (input, sptr))
+    {
+      
+    }
+
+  return true;
 }
 
 bool
