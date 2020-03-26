@@ -1337,7 +1337,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
 
   if (prim->argcount != noperands)
     {
-      fprintf (stderr, "too many arguments to `%s', expected %du, got %du\n",
+      fprintf (stderr, "too many arguments to `%s', expected %ud, got %ud\n",
                prim->name,
                prim->argcount,
                noperands);
