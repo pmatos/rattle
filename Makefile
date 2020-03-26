@@ -1,4 +1,5 @@
 # Rattle Makefile
+.PHONY: all
 all: rattle runtime.o
 
 # Flags
