@@ -76,7 +76,7 @@ jobs:
         variant: 'CS'
         version: '7.6'
     - name: Run Tests
-      run: make TEST_PREFIX='valgrind -q' tests
+      run: make TEST_PREFIX='valgrind -q --leak-check=full' tests
 
   buildtest-ubsan:
 
