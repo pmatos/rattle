@@ -645,6 +645,9 @@ parse_symbol_element (const char **input)
   // | <mnemonic excape>
   // | \|
 
+  if (! **input)
+    return false;
+  
   if (**input != '|' && **input != '\\')
     {
       (*input)++;
