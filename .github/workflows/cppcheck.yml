@@ -15,7 +15,8 @@ jobs:
         apt-get update
         apt-get install -y gcc gcc-8 cppcheck
     - name: Check
-      run: [ -z "$(cppcheck --enable=all --suppress=missingIncludeSystem -I. -Isrc/ -q src/rattle.c 2>&1 )" ]
+      run: |
+        [ -z "$(cppcheck --enable=all --suppress=missingIncludeSystem -I. -Isrc/ -q src/rattle.c 2>&1 )" ]
   
         
 
