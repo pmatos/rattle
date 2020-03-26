@@ -52,7 +52,7 @@ help (const char *prog) {
 // Prototypes
 void evaluate(const char *);
 void compile(const char *, const char *);
-void compile_expression (const char *);
+void compile_program (const char *);
 
 // TODO find correct posix value
 #define FILE_PATH_MAX 1024
@@ -447,12 +447,22 @@ bool parse_lparen (const char **);
 bool parse_rparen (const char **);
 bool parse_whitespace (const char **);
 
+// Comments behave like whitespaces so they are removed with it
 bool
 parse_whitespace (const char **input)
 {
   const char *tmp = *input;
-  while (isspace (**input))
-    (*input)++;
+  while (isspace (**input) || **input == ';')
+    {
+      if (**input == ';')
+        {
+          (*input)++;
+          while (**input && **input != '\n')
+            (*input)++;
+        }
+      else
+        (*input)++;
+    }
   return *input != tmp; // return true if whitespace was skipped
 }
 
@@ -823,6 +833,75 @@ parse_body (const char **input, schptr_t *sptr)
   (void) parse_whitespace (&ptr);
 
   while (parse_expression (&ptr, &e))
+    {
+      (void) parse_whitespace (&ptr);
+
+      expression_list_t *n = alloc (sizeof (*n));
+      n->expr = e;
+      n->next = NULL;
+      last->next = n;
+      last = n;
+    }
+
+  *input = ptr;
+
+  schexprseq_t *seq = alloc (sizeof (*seq));
+  seq->type = SCH_EXPR_SEQ;
+  seq->seq = elst;
+  *sptr = (schptr_t) seq;
+
+  return true;
+}
+
+bool
+parse_command (const char **input, schptr_t *sptr)
+{
+  // Syntax:
+  // <command> -> <expression>
+
+  return parse_expression(input, sptr);
+}
+
+bool
+parse_command_or_definition (const char **input, schptr_t *sptr)
+{
+  // Syntax:
+  // <command or definition> ->
+  //          <command>
+  // |        <definition>
+  // |        (begin <command or definition>+)
+  //
+  // TODO: implement definition and (begin ...) support
+
+  return parse_command (input, sptr);
+}
+
+bool
+parse_program (const char **input, schptr_t *sptr)
+{
+  const char *ptr = *input;
+
+  // Syntax:
+  // <program> ->
+  //          <import declaration>+
+  // |        <command or definition>+
+  //
+  // TODO: implement import declaration support
+  
+  expression_list_t *elst = NULL;
+  expression_list_t *last = NULL;
+  schptr_t e;
+  if (!parse_command_or_definition (&ptr, &e))
+    return false;
+
+  elst = alloc (sizeof (*elst));
+  elst->expr = e;
+  elst->next = NULL;
+  last = elst;
+
+  (void) parse_whitespace (&ptr);
+
+  while (parse_command_or_definition (&ptr, &e))
     {
       (void) parse_whitespace (&ptr);
 
@@ -1909,7 +1988,7 @@ const char *find_system_tmpdir (void);
 void
 evaluate(const char *cmd)
 {
-  compile_expression(cmd);
+  compile_program(cmd);
 }
 
 char *
@@ -2012,7 +2091,10 @@ compile (const char *input, const char *output)
   char *s = read_file_to_mem (input);
   schptr_t sptr = 0;
   const char *cs = s;
-  if (!parse_expression (&cs, &sptr))
+
+  (void) parse_whitespace (&cs);
+
+  if (!parse_program (&cs, &sptr))
     err_parse (cs);
 
   // free parsed string
@@ -2069,10 +2151,13 @@ find_system_tmpdir (void)
 }
 
 void
-compile_expression (const char *e)
+compile_program (const char *e)
 {
   schptr_t sptr = 0;
-  if (!parse_expression (&e, &sptr))
+
+  (void) parse_whitespace (&e);
+
+  if (!parse_program (&e, &sptr))
     err_parse (e);
 
   const char *tmpdir = find_system_tmpdir ();
