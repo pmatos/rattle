@@ -1111,11 +1111,11 @@ parse_imm_fixnum (const char **input, schptr_t *imm)
 bool
 parse_imm_char (const char **input, schptr_t *imm)
 {
-  unsigned char c = 0;
   const char *ptr = *input;
 
   if (ptr[0] == '#' && ptr[1] == '\\')
     {
+      unsigned char c = 0;
       ptr += 2;
       if (!strncmp (ptr, "alarm", 5))
         {
