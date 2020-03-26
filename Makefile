@@ -66,16 +66,16 @@ endif
 
 .PHONY: tests
 tests:
-	racket tests/script/test.rkt -c "./rattle -e --" tests/null.tests
-	racket tests/script/test.rkt -c "./rattle -e --" tests/fixnum.tests
-	racket tests/script/test.rkt -c "./rattle -e --" tests/boolean.tests
-	racket tests/script/test.rkt -c "./rattle -e --" tests/char.tests
-	racket tests/script/test.rkt -c "./rattle -e --" tests/primitives.tests
-	racket tests/script/test.rkt -c "./rattle -e --" tests/if.tests
-	racket tests/script/test.rkt -c "./rattle -e --" tests/let.tests
-	./rattle -o fx1 -c tests/fx1.rl && test `./fx1` = "1"
-	./rattle -o fxadd1 -c tests/fxadd1.rl && test `./fxadd1` = "190"
-	./rattle -o primitives-1 -c tests/primitives-1.rl && test `./primitives-1` = "#f"
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/null.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/fixnum.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/boolean.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/char.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/primitives.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/if.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/let.tests
+	$(TEST_PREFIX) ./rattle -o fx1 -c tests/fx1.rl && test `./fx1` = "1"
+	$(TEST_PREFIX) ./rattle -o fxadd1 -c tests/fxadd1.rl && test `./fxadd1` = "190"
+	$(TEST_PREFIX) ./rattle -o primitives-1 -c tests/primitives-1.rl && test `./primitives-1` = "#f"
 
 .PHONY: clean
 clean:
