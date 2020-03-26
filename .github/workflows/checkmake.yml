@@ -1,0 +1,26 @@
+name: CheckMake
+
+on: [push, pull_request]
+
+env:
+  GOPATH: $HOME/go
+
+jobs:
+  cppcheck:
+
+    runs-on: ubuntu-latest
+    container: debian:buster-slim
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y golang make pandoc git
+    - name: Build checkmake
+      run: |
+        go get github.com/mrtazz/checkmake
+        cd $GOPATH/src/github.com/mrtazz/checkmake
+        make
+    - name: Check
+      run: checkmake Makefile
