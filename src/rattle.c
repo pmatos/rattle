@@ -2051,7 +2051,7 @@ read_file_to_mem (const char *path)
   // read file contents to memory
   const size_t blocksize = 1024;
   size_t ssize = blocksize;
-  char *s = (char *) alloc (sizeof (*s) * ssize);
+  char *s = (char *) alloc (ssize);
   size_t bytes_read = 0;
   int c;
   while ((c = fgetc (f)) != EOF)
