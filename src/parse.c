@@ -523,7 +523,10 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
   // skip possible whitespace between lparen and let keyword
   (void) parse_whitespace (&ptr);
 
-  if (! parse_char_sequence (&ptr, "let"))
+  bool letstar = false;
+  if (parse_char_sequence (&ptr, "let*"))
+    letstar = true;
+  else if (!parse_char_sequence (&ptr, "let"))
     return false;
 
   // skip possible whitespace between let and lparen
@@ -587,6 +590,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
 
   schlet_t *l = (schlet_t *) alloc (sizeof (*l));
   l->type = SCH_LET;
+  l->star_p = letstar;
   l->bindings = bindings;
   l->body = body;
 

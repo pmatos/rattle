@@ -83,6 +83,7 @@ btestcomp:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/primitives.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/if.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/let.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/lets.tests
 
 # AFL crash tests
 afltest:

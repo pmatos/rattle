@@ -92,6 +92,7 @@ typedef struct binding_spec_list
 typedef struct schlet
 {
   sch_type type;
+  bool star_p;
   binding_spec_list_t *bindings;
   schptr_t body;
 } schlet_t;

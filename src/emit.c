@@ -620,6 +620,32 @@ emit_asm_if (FILE *f, schptr_t p, size_t si, env_t *env)
 }
 
 void
+emit_asm_let_star (FILE *f, schptr_t sptr, size_t si, env_t *env)
+{
+  // We have to evaluate all let bindings right hand sides.
+  // Add definitions for all of them into an environment and
+  // emit code for the body of the let with the environment properly
+  // filled.
+  schlet_t *let = (schlet_t *) sptr;
+  assert (let->type == SCH_LET);
+
+  // Evaluate each of the bindings in the bindings list
+  env_t *nenv = env;
+  size_t freesi = si; // currently free si
+  for (binding_spec_list_t *bs = let->bindings; bs != NULL; bs = bs->next)
+    {
+      emit_asm_expr (f, bs->expr, freesi, nenv);
+
+      fprintf (f, "    movq %%rax, -%zu(%%rsp)\n", freesi);
+
+      nenv = env_add (bs->id, freesi, nenv);
+      freesi += WORD_BYTES;
+    }
+
+  emit_asm_expr (f, let->body, freesi, nenv);
+}
+
+void
 emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
   // We have to evaluate all let bindings right hand sides.
@@ -628,6 +654,12 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
   // filled.
   schlet_t *let = (schlet_t *) sptr;
   assert (let->type == SCH_LET);
+
+  if (let->star_p)
+    {
+      emit_asm_let_star (f, sptr, si, env);
+      return;
+    }
 
   // Evaluate each of the bindings in the bindings list
   env_t *nenv = make_env ();
