@@ -914,13 +914,20 @@ parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
 
   schptr_t expression;
   if (!parse_expression (&ptr, &expression))
-    return false;
+    {
+      free_identifier (identifier);
+      return false;
+    }
 
   // skip possible whitespace between expression and rparen
   (void) parse_whitespace (&ptr);
 
   if (!parse_rparen (&ptr))
-    return false;
+    {
+      free_identifier (identifier);
+      free_expression (expression);
+      return false;
+    }
 
   *input = ptr;
 
