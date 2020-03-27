@@ -39,7 +39,9 @@ CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
 # Sources and Dependencies
 # TODO: make runtime.c also depend on headers
 
-SRCS = src/rattle.c
+SRCS = $(wildcard src/*.c)
+OBJS = $(SRCS:.c=.o)
+
 .PHONY: depend
 depend: .depend
 .depend: $(SRCS) config.h
@@ -49,12 +51,14 @@ depend: .depend
 include .depend
 
 # Rules
-rattle.o: $(SRCS) config.h
-	$(CC) $(CPPFLAGS) -I. $(CFLAGS) $(EXTRA_CFLAGS) -c $(SRCS) -o $@
-rattle: rattle.o
+rattle.c: config.h
+src/%.o: src/%.c
+	$(CC) $(CPPFLAGS) -I. $(CFLAGS) $(EXTRA_CFLAGS) -c $< -o $@
+
+rattle: $(OBJS)
 	$(CC) $^ -o $@ $(LDFLAGS)
 
-runtime.o: src/runtime.c
+runtime.o: src/runtime/runtime.c
 	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
 config.h:
@@ -93,4 +97,4 @@ itest:
 
 .PHONY: clean
 clean:
-	$(RM) rattle runtime.o rattle.o config.h .depend
+	$(RM) rattle runtime.o rattle.o parse.o config.h .depend

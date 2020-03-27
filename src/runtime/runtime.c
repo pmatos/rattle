@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#include "common.h"
+#include "../common.h"
 
 // Runtime entry point.
 // The compiler generated code is linked here.
