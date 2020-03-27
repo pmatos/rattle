@@ -398,7 +398,7 @@ free_expression (schptr_t e)
 void
 free_binding_spec_list (binding_spec_list_t *bs)
 {
-  binding_spec_list_t *tmp = bs;
+  binding_spec_list_t *tmp = NULL;
   while (bs)
     {
       tmp = bs->next;
