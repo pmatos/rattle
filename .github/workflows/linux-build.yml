@@ -26,7 +26,7 @@ jobs:
         variant: 'CS'
         version: '7.6'
     - name: Run Tests
-      run: make tests
+      run: make test
     - uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
@@ -48,7 +48,7 @@ jobs:
     - name: Build
       run: make
     - name: Run Tests
-      run: make tests
+      run: make test
 
   buildtest-vg:
 
@@ -76,7 +76,7 @@ jobs:
         variant: 'CS'
         version: '7.6'
     - name: Run Tests
-      run: make TEST_PREFIX='valgrind -q --leak-check=full' tests
+      run: make TEST_PREFIX='valgrind -q --leak-check=full' test
 
   buildtest-ubsan:
 
@@ -103,4 +103,4 @@ jobs:
         variant: 'CS'
         version: '7.6'
     - name: Run Tests
-      run: make tests
+      run: make test
