@@ -223,7 +223,7 @@ typedef struct schprim
 typedef struct schprim_eval
 {
   sch_type type;
-  schprim_t *prim;
+  const schprim_t *prim;
 } schprim_eval_t;
 
 typedef struct schprim_eval1
@@ -431,6 +431,7 @@ bool parse_imm_null (const char **, schptr_t *);
 bool parse_imm_fixnum (const char **, schptr_t *);
 bool parse_imm_char (const char **, schptr_t *);
 bool parse_if (const char **, schptr_t *);
+bool parse_procedure_call (const char **, schptr_t *);
 
 
 // Helper parsing procedures
@@ -1241,106 +1242,148 @@ parse_expression (const char **input, schptr_t *sptr)
 
   if (parse_imm (input, sptr) ||
       parse_identifier (input, sptr) ||
-      parse_prim (input, sptr) ||
       parse_if (input, sptr) ||
       parse_let_wo_id (input, sptr) ||
-      parse_prim1 (input, sptr) ||
-      parse_prim2 (input, sptr))
+      parse_procedure_call (input, sptr))
     return true;
 
   return false;
 }
 
 bool
-parse_prim (const char **input, schptr_t *sptr)
+parse_operator (const char **input, schptr_t *sptr)
 {
-  for (size_t i = 0; i < primitives_count; i++)
-    {
-      schprim_t prim = primitives[i];
-      if (!strncmp (prim.name, *input, strlen (prim.name)))
-        {
-          *sptr = (schptr_t)(&(primitives[i]));
-          (*input) += strlen (prim.name);
-          return true;
-        }
-    }
-  return false;
+  return parse_expression (input, sptr);
 }
 
 bool
-parse_prim_generic (const char **input, size_t nargs, schptr_t *sptr)
+parse_operand (const char **input, schptr_t *sptr)
 {
-#define PRIM_MAX_ARGS 2
-  assert (nargs <= PRIM_MAX_ARGS);
+  return parse_expression (input, sptr);
+}
+
+bool
+parse_procedure_call (const char **input, schptr_t *sptr)
+{
   const char *ptr = *input;
+  // Syntax:
+  // <procedure call> ->
+  //          ( <operator> <operand>* )
 
   if (!parse_lparen (&ptr))
     return false;
 
   (void) parse_whitespace (&ptr);
 
-  schptr_t prim;
-  // infer: initialization here shuts it up
-  schptr_t args[PRIM_MAX_ARGS] = {0};
-
-  if (!parse_prim (&ptr, &prim))
+  schptr_t op;
+  if (!parse_operator (&ptr, &op))
     return false;
 
-  for (size_t i = 0; i < nargs; i++)
+  (void) parse_whitespace (&ptr);
+
+  // Parse zero or more arguments : the operands
+  // Gathers a list of expressions with arguments
+  expression_list_t *es = NULL;
+  expression_list_t *last = es;
+  schptr_t e;
+  unsigned int noperands = 0;
+  while (parse_operand (&ptr, &e))
     {
+      noperands++;
       (void) parse_whitespace (&ptr);
 
-      if (!parse_expression (&ptr, &args[i]))
-        return false;
+      expression_list_t *node = alloc (sizeof *node);
+      node->expr = e;
+      node->next = NULL;
+
+      if (!es)
+        es = node;
+      if (last)
+        last->next = node;
+      last = node;
     }
 
   if (!parse_rparen (&ptr))
     return false;
 
-  // All parsed correctly
+  // Done with parsing procedure call
   *input = ptr;
 
-  switch (nargs)
+  // Ensure that we support these types of procedure calls
+  // Currently operator should be a primitive
+  schid_t *id = (schid_t *) op;
+  if (sch_imm_p (op) || id->type != SCH_ID)
+    {
+      fprintf (stderr, "unsupported operator type for procedure call\n");
+      exit (EXIT_FAILURE);
+    }
+
+  const schprim_t *prim = NULL;
+  for(size_t pi = 0; pi < primitives_count; pi++)
+    {
+      const schprim_t *p = &(primitives[pi]);
+      if (!strcmp (id->name, p->name))
+        {
+          prim = p;
+          break;
+        }
+    }
+
+  if (!prim)
+    {
+      fprintf (stderr, "unknown primitive function `%s'\n", id->name);
+      exit (EXIT_FAILURE);
+    }
+
+  if (prim->argcount != noperands)
+    {
+      fprintf (stderr, "too many arguments to `%s', expected %ud, got %ud\n",
+               prim->name,
+               prim->argcount,
+               noperands);
+      exit (EXIT_FAILURE);
+    }
+
+  // we only support primitives at the moment so transform the
+  // procedure call into a primitive evaluation
+  switch (noperands)
     {
     case 1:
       {
-        schprim_eval1_t *pe = (schprim_eval1_t *)alloc (sizeof *pe);
-        pe->type = SCH_PRIM_EVAL1;
-        pe->prim = (schprim_t *) prim;
-        pe->arg1 = args[0];
-        *sptr = (schptr_t)pe;
+        schprim_eval1_t *p1 = alloc (sizeof *p1);
+        p1->type = SCH_PRIM_EVAL1;
+        p1->prim = prim;
+        p1->arg1 = es->expr;
+        *sptr = (schptr_t) p1;
       }
       break;
     case 2:
       {
-        schprim_eval2_t *pe = (schprim_eval2_t *)alloc (sizeof *pe);
-        pe->type = SCH_PRIM_EVAL2;
-        pe->prim = (schprim_t *) prim;
-        pe->arg1 = args[0];
-        pe->arg2 = args[1];
-        *sptr = (schptr_t)pe;
+        schprim_eval2_t *p2 = alloc (sizeof *p2);
+        p2->type = SCH_PRIM_EVAL2;
+        p2->prim = prim;
+        p2->arg1 = es->expr;
+        p2->arg2 = es->next->expr;
+        *sptr = (schptr_t) p2;
       }
       break;
     default:
-      err_unreachable ("unhandled number of args for primitive");
+      err_unreachable ("primitive with more than 2 operands");
       break;
     }
 
+  // free the expression list as we don't need it any more
+  expression_list_t *tmp = es;
+  while (tmp)
+    {
+      tmp = tmp->next;
+      free (es);
+      es = tmp;
+    }
+
   return true;
-#undef PRIM_MAX_ARGS
 }
 
-bool
-parse_prim1 (const char **input, schptr_t *sptr)
-{
-  return parse_prim_generic (input, 1, sptr);
-}
-
-bool
-parse_prim2 (const char **input, schptr_t *sptr)
-{
-  return parse_prim_generic (input, 2, sptr);
-}
 
 ///////////////////////////////////////////////////////////////////////
 //

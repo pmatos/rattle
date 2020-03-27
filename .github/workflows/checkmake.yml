@@ -23,4 +23,4 @@ jobs:
         cd $GOPATH/src/github.com/mrtazz/checkmake
         make
     - name: Check
-      run: checkmake Makefile
+      run: $GOPATH/src/github.com/mrtazz/checkmake/checkmake Makefile

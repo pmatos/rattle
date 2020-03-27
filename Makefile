@@ -1,4 +1,5 @@
 # Rattle Makefile
+.PHONY: all
 all: rattle runtime.o
 
 # Flags
@@ -39,8 +40,8 @@ CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
 # TODO: make runtime.c also depend on headers
 
 SRCS = src/rattle.c
+.PHONY: depend
 depend: .depend
-
 .depend: $(SRCS) config.h
 	rm -f ./.depend
 	$(CC) $(CFLAGS) -MM $(SRCS) -I. -MF ./.depend
@@ -64,19 +65,31 @@ else
 	echo "/* #define UBSANLIB */" >> $@
 endif
 
-.PHONY: tests
-tests:
+.PHONY: test btests afltests itests btest
+test: btest afltest itest
+
+btest: btestimm btestcomp
+btestimm:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/null.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/fixnum.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/boolean.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/char.tests
+
+btestcomp:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/primitives.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/if.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/let.tests
-	for t in tests/afl/*.rl; do $(TEST_PREFIX) ./rattle -o /dev/null -c $t; done
+
+# AFL crash tests
+afltest:
+	for t in tests/afl/*.rl; do $(TEST_PREFIX) ./rattle -o /dev/null -c $$t; [ "$$?" = "1" ] || true ; done
+
+# Integration tests
+itest:
 	$(TEST_PREFIX) ./rattle -o fx1 -c tests/fx1.rl && test `./fx1` = "1"
 	$(TEST_PREFIX) ./rattle -o fxadd1 -c tests/fxadd1.rl && test `./fxadd1` = "190"
 	$(TEST_PREFIX) ./rattle -o primitives-1 -c tests/primitives-1.rl && test `./primitives-1` = "#f"
+
 
 .PHONY: clean
 clean:
