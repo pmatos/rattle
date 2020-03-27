@@ -1312,7 +1312,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
   // Ensure that we support these types of procedure calls
   // Currently operator should be a primitive
   schid_t *id = (schid_t *) op;
-  if (id->type != SCH_ID)
+  if (sch_imm_p (op) || id->type != SCH_ID)
     {
       fprintf (stderr, "unsupported operator type for procedure call\n");
       exit (EXIT_FAILURE);
