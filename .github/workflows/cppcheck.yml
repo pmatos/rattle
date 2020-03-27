@@ -19,7 +19,7 @@ jobs:
     - name: Check for failure
       run: |
         cat cppcheck.log
-        test -z "cppcheck.log"
+        test ! -s "cppcheck.log"
     - uses: actions/upload-artifact@master
       if: failure()
       with:
