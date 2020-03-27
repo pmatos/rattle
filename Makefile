@@ -65,8 +65,10 @@ else
 	echo "/* #define UBSANLIB */" >> $@
 endif
 
-.PHONY: tests
-tests:
+.PHONY: tests btests afltests itests
+tests: btests afltests itests
+
+btests:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/null.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/fixnum.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/boolean.tests
@@ -74,10 +76,17 @@ tests:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/primitives.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/if.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/let.tests
+
+# AFL crash tests
+afltests:
 	for t in tests/afl/*.rl; do $(TEST_PREFIX) ./rattle -o /dev/null -c $$t; [ "$$?" = "1" ] || true ; done
+
+# Integration tests
+itests:
 	$(TEST_PREFIX) ./rattle -o fx1 -c tests/fx1.rl && test `./fx1` = "1"
 	$(TEST_PREFIX) ./rattle -o fxadd1 -c tests/fxadd1.rl && test `./fxadd1` = "190"
 	$(TEST_PREFIX) ./rattle -o primitives-1 -c tests/primitives-1.rl && test `./primitives-1` = "#f"
+
 
 .PHONY: clean
 clean:
