@@ -65,14 +65,17 @@ else
 	echo "/* #define UBSANLIB */" >> $@
 endif
 
-.PHONY: test btests afltests itests
+.PHONY: test btests afltests itests btest
 test: btest afltest itest
 
-btest:
+btest: btestimm btestcomp
+btestimm:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/null.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/fixnum.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/boolean.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/char.tests
+
+btestcomp:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/primitives.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/if.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/let.tests
