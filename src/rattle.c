@@ -212,6 +212,11 @@ typedef void (*prim_emmiter) (FILE *, schptr_t, size_t, struct env *);
 
 typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_EXPR_SEQ, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
 
+typedef struct schtype
+{
+  sch_type type;
+} schtype_t;
+
 typedef struct schprim
 {
   sch_type type;         // Type (always SCH_PRIM)
@@ -279,6 +284,130 @@ typedef struct schexprseq
   expression_list_t *seq;
 } schexprseq_t;
 
+
+///////////////////////////////////////////////////////////////////////
+//
+// Free expressions
+//
+//////////////////////////////////////////////////////////////////////
+void free_expression (schptr_t);
+void free_binding_spec_list (binding_spec_list_t *);
+
+void
+free_identifier (schid_t *id)
+{
+  free (id->name);
+  free (id);
+}
+
+void
+free_if (schif_t *e)
+{
+  free_expression (e->condition);
+  free_expression (e->thenv);
+  free_expression (e->elsev);
+  free (e);
+}
+
+void
+free_let (schlet_t *e)
+{
+  free_binding_spec_list (e->bindings);
+  free_expression (e->body);
+  free (e);
+}
+
+void
+free_expression_list (expression_list_t *e)
+{
+  expression_list_t *tmp = NULL;
+  while (e)
+    {
+      tmp = e->next;
+      free_expression (e->expr);
+      free (e);
+      e = tmp;
+    }
+}
+
+void
+free_expr_seq (schexprseq_t *e)
+{
+  free_expression_list (e->seq);
+  free (e);
+}
+
+void
+free_prim_eval1 (schprim_eval1_t *e)
+{
+  free_expression (e->arg1);
+  free (e);
+}
+
+void
+free_prim_eval2 (schprim_eval2_t *e)
+{
+  free_expression (e->arg1);
+  free_expression (e->arg2);
+  free (e);
+}
+
+#define SCHTYPE(e) (((schtype_t *) e)->type)
+
+void
+free_expression (schptr_t e)
+{
+  if (sch_imm_p (e))
+    return;
+
+  switch (SCHTYPE (e))
+    {
+    case SCH_PRIM:
+      // these are statically allocated and don't need to be freed
+      break;
+
+    case SCH_IF:
+      free_if ((schif_t *) e);
+      break;
+
+    case SCH_ID:
+      free_identifier ((schid_t *) e);
+      break;
+
+    case SCH_LET:
+      free_let ((schlet_t *) e);
+      break;
+
+    case SCH_EXPR_SEQ:
+      free_expr_seq ((schexprseq_t *) e);
+      break;
+
+    case SCH_PRIM_EVAL1:
+      free_prim_eval1 ((schprim_eval1_t *) e);
+      break;
+
+    case SCH_PRIM_EVAL2:
+      free_prim_eval2 ((schprim_eval2_t *) e);
+      break;
+
+    default:
+      err_unreachable ("unknown type");
+    }
+}
+
+void
+free_binding_spec_list (binding_spec_list_t *bs)
+{
+  binding_spec_list_t *tmp = bs;
+  while (bs)
+    {
+      tmp = bs->next;
+      free_identifier (bs->id);
+      free_expression (bs->expr);
+      free (bs);
+      bs = tmp;
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -974,19 +1103,28 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
   (void) parse_whitespace (&ptr);
 
   if (!parse_rparen (&ptr))
-    return false;
+    {
+      free_binding_spec_list (bindings);
+      return false;
+    }
 
   // skip possible whitespace between rparen and body
   (void) parse_whitespace (&ptr);
 
   if (!parse_body (&ptr, &body))
-    return false;
+    {
+      free_binding_spec_list (bindings);
+      return false;
+    }
 
   // skip possible whitespace between body and rparen
   (void) parse_whitespace (&ptr);
 
   if (!parse_rparen (&ptr))
-    return false;
+    {
+      free_binding_spec_list (bindings);
+      return false;
+    }
 
   // Parse of let successful and complete
   *input = ptr;
