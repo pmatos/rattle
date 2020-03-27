@@ -915,7 +915,7 @@ parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
   schptr_t expression;
   if (!parse_expression (&ptr, &expression))
     {
-      free_identifier (identifier);
+      free_expression (identifier);
       return false;
     }
 
@@ -924,7 +924,7 @@ parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
 
   if (!parse_rparen (&ptr))
     {
-      free_identifier (identifier);
+      free_expression (identifier);
       free_expression (expression);
       return false;
     }
