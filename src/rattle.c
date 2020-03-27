@@ -1130,6 +1130,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
   if (!parse_rparen (&ptr))
     {
       free_binding_spec_list (bindings);
+      free_expression (body);
       return false;
     }
 
