@@ -1304,7 +1304,17 @@ parse_procedure_call (const char **input, schptr_t *sptr)
     }
 
   if (!parse_rparen (&ptr))
-    return false;
+    {
+      // Need to free expression list
+      expression_list_t *tmp = es;
+      while (es)
+        {
+          tmp = es->next;
+          free (es);
+          es = tmp;
+        }
+      return false;
+    }
 
   // Done with parsing procedure call
   *input = ptr;
