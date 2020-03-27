@@ -40,8 +40,8 @@ CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
 # TODO: make runtime.c also depend on headers
 
 SRCS = src/rattle.c
+.PHONY: depend
 depend: .depend
-
 .depend: $(SRCS) config.h
 	rm -f ./.depend
 	$(CC) $(CFLAGS) -MM $(SRCS) -I. -MF ./.depend
