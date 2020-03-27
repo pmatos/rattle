@@ -21,6 +21,7 @@ jobs:
         cat cppcheck.log
         test -z "cppcheck.log"
     - uses: actions/upload-artifact@master
+      name: cppcheck-log
       if: failure()
       with:
         path: cppcheck.log
