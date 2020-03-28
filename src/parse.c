@@ -537,6 +537,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
 
   // Now we parse each of the binding specs and store them
   binding_spec_list_t *bindings = NULL;
+  binding_spec_list_t *last = NULL;
   schptr_t body;
 
   while (1)
@@ -552,9 +553,18 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
       binding_spec_list_t *b = alloc (sizeof (*b));
       b->id = (schid_t *) id;
       b->expr = expr;
-      b->next = bindings;
+      b->next = NULL;
 
-      bindings = b;
+      if (!bindings)
+        {
+          bindings = b;
+          last = b;
+        }
+      else
+        {
+          last->next = b;
+          last = b;
+        }
     }
 
   // skip possible whitespace between last binding spec and rparen
