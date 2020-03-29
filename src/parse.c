@@ -475,7 +475,7 @@ parse_program (const char **input, schptr_t *sptr)
   // |        <command or definition>+
   //
   // TODO: implement import declaration support
-  
+
   expression_list_t *elst = NULL;
   expression_list_t *last = NULL;
   schptr_t e;

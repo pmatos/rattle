@@ -272,6 +272,9 @@ compile (const char *input, const char *output)
   char *asmtmp = output_asm (sptr);
   dump_asm_if_needed (asmtmp);
 
+  // free expression
+  free_expression (sptr);
+
   // Now compile file and link with runtime
   {
     int child = fork ();
@@ -344,6 +347,9 @@ compile_program (const char *e)
 
   char *asmtmp = output_asm (sptr);
   dump_asm_if_needed (asmtmp);
+
+  // free expression
+  free_expression (sptr);
 
   // close ofd so gcc can write to it
   close (ofd);

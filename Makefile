@@ -98,4 +98,4 @@ itest:
 
 .PHONY: clean
 clean:
-	$(RM) rattle runtime.o rattle.o parse.o config.h .depend
+	$(RM) rattle $(OBJS) config.h .depend
