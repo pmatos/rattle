@@ -955,6 +955,9 @@ parse_procedure_call (const char **input, schptr_t *sptr)
       exit (EXIT_FAILURE);
     }
 
+  // We found the primitive function we needed - time to free id
+  free_identifier (id);
+
   // we only support primitives at the moment so transform the
   // procedure call into a primitive evaluation
   switch (noperands)

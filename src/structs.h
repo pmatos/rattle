@@ -111,4 +111,5 @@ typedef struct schexprseq
 
 void free_expression (schptr_t);
 void free_expression_list (expression_list_t *);
+void free_identifier (schid_t *);
 void free_binding_spec_list (binding_spec_list_t *);
