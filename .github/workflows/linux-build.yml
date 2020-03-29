@@ -76,7 +76,7 @@ jobs:
         variant: 'CS'
         version: '7.6'
     - name: Run Tests
-      run: make TEST_PREFIX='valgrind -q --leak-check=full' test
+      run: make TEST_PREFIX='valgrind --tool=memcheck -q --leak-check=full --error-exitcode=35' test
 
   buildtest-ubsan:
 

@@ -630,11 +630,11 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
   assert (let->type == SCH_LET);
 
   // Evaluate each of the bindings in the bindings list
-  env_t *nenv = make_env ();
+  env_t *nenv = env;
   size_t freesi = si; // currently free si
   for (binding_spec_list_t *bs = let->bindings; bs != NULL; bs = bs->next)
     {
-      emit_asm_expr (f, bs->expr, freesi, env);
+      emit_asm_expr (f, bs->expr, freesi, let->star_p ? nenv : env);
 
       fprintf (f, "    movq %%rax, -%zu(%%rsp)\n", freesi);
 
@@ -642,8 +642,8 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
       freesi += WORD_BYTES;
     }
 
-  env = env_append (nenv, env);
-  emit_asm_expr (f, let->body, freesi, env);
+  emit_asm_expr (f, let->body, freesi, nenv);
+  free_env_partial (nenv, env, /*shallow=*/true);
 }
 
 void

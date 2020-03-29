@@ -92,6 +92,7 @@ typedef struct binding_spec_list
 typedef struct schlet
 {
   sch_type type;
+  bool star_p;
   binding_spec_list_t *bindings;
   schptr_t body;
 } schlet_t;
@@ -110,4 +111,7 @@ typedef struct schexprseq
 
 void free_expression (schptr_t);
 void free_expression_list (expression_list_t *);
+void free_identifier (schid_t *);
 void free_binding_spec_list (binding_spec_list_t *);
+
+schid_t *clone_schid (const schid_t *);
