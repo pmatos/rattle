@@ -329,8 +329,6 @@ parse_identifier (const char **input, schptr_t *sptr)
 
   // Successfully parsed an identifier so we can now create it
   schid_t *sid = (schid_t *) alloc (sizeof *sid);
-  if (!sid)
-    err_oom ();
 
   sid->type = SCH_ID;
   sid->name = id;
@@ -655,8 +653,6 @@ parse_if (const char **input, schptr_t *sptr)
   // We parsed all we wanted now, so prepare return value
   *input = ptr;
   schif_t *ifv = (schif_t *) alloc (sizeof *ifv);
-  if (!ifv)
-    err_oom ();
 
   ifv->type = SCH_IF;
   ifv->condition = condition;
