@@ -235,6 +235,8 @@ read_file_to_mem (const char *path)
         }
     }
 
+  s[bytes_read] = '\0';
+
   // close file
   fclose (f);
   return s;

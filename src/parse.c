@@ -225,7 +225,7 @@ parse_symbol_element (const char **input)
 
   if (! **input)
     return false;
-  
+
   if (**input != '|' && **input != '\\')
     {
       (*input)++;
