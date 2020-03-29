@@ -36,6 +36,6 @@ env_t *make_env ();
 env_t *env_add (schid_t *, size_t, env_t *);
 env_t *env_append (env_t *, env_t *);
 bool env_ref (schid_t *, env_t *, size_t *);
-
+void free_env_partial (env_t *, const env_t *, bool);
 
 

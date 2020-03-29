@@ -16,7 +16,10 @@
 #include "structs.h"
 
 #include <stdlib.h>
+#include <string.h>
+
 #include "err.h"
+#include "memory.h"
 
 void
 free_identifier (schid_t *id)
@@ -132,4 +135,12 @@ free_binding_spec_list (binding_spec_list_t *bs)
       free (bs);
       bs = tmp;
     }
+}
+
+schid_t *
+clone_schid (const schid_t *id)
+{
+  schid_t *clone = alloc (sizeof *clone);
+  clone->name = strdup (id->name);
+  return clone;
 }

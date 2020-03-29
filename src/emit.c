@@ -643,6 +643,7 @@ emit_asm_let_star (FILE *f, schptr_t sptr, size_t si, env_t *env)
     }
 
   emit_asm_expr (f, let->body, freesi, nenv);
+  free_env_partial (nenv, env, /*shallow=*/true);
 }
 
 void

@@ -16,6 +16,9 @@
 
 #include "env.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "memory.h"
 #include "string.h"
 
@@ -58,4 +61,19 @@ env_ref (schid_t *id, env_t *env, size_t *si)
         }
     }
   return false;
+}
+
+void
+free_env_partial (env_t *e1, const env_t *e2, bool shallow)
+{
+  while (e1 && e1 != e2)
+    {
+      env_t *tmp = e1->next;
+      if (!shallow)
+        free_identifier (e1->id);
+      free (e1);
+      e1 = tmp;
+    }
+  if (!e1 && e2)
+    fprintf (stderr, "internal warning: freeing partial env ended up freeing whole env\n");
 }
