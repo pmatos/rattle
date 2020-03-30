@@ -10,6 +10,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y make
     - name: Scan
       run: scan-build -o report -analyzer-config 'crosscheck-with-z3=true' make DEBUG=1 -j2 2>&1 | tee output.log
     - name: Check for failure
