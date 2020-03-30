@@ -1,0 +1,31 @@
+name: Scan Build LLVM SA
+
+on: [push, pull_request]
+
+jobs:
+  scanbuild:
+
+    runs-on: ubuntu-latest
+    container: pmatos/scan-build:latest
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y make
+    - name: Scan
+      run: scan-build -o report -analyzer-config 'crosscheck-with-z3=true' make DEBUG=1 -j2 2>&1 | tee output.log
+    - name: Check for failure
+      run: |
+        tail -n1 output.log | grep -q '^scan-build: No bugs found.$'
+    - uses: actions/upload-artifact@master
+      if: failure()
+      with:
+        name: scanbuild-${{ github.sha }}
+        path: report/
+
+  
+        
+
+  
