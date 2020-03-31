@@ -35,6 +35,7 @@ struct env;
 typedef void (*prim_emmiter) (FILE *, schptr_t, size_t, struct env *);
 
 typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_EXPR_SEQ, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
+typedef enum { LET, LETS, LETREC } let_t;
 
 typedef struct schtype
 {
@@ -92,7 +93,7 @@ typedef struct binding_spec_list
 typedef struct schlet
 {
   sch_type type;
-  bool star_p;
+  let_t let;
   binding_spec_list_t *bindings;
   schptr_t body;
 } schlet_t;

@@ -521,9 +521,11 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
   // skip possible whitespace between lparen and let keyword
   (void) parse_whitespace (&ptr);
 
-  bool letstar = false;
+  let_t t = LET;
   if (parse_char_sequence (&ptr, "let*"))
-    letstar = true;
+    t = LETS;
+  else if (parse_char_sequence (&ptr, "letrec"))
+    t = LETREC;
   else if (!parse_char_sequence (&ptr, "let"))
     return false;
 
@@ -598,7 +600,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
 
   schlet_t *l = (schlet_t *) alloc (sizeof (*l));
   l->type = SCH_LET;
-  l->star_p = letstar;
+  l->let = t;
   l->bindings = bindings;
   l->body = body;
 
@@ -994,3 +996,64 @@ parse_procedure_call (const char **input, schptr_t *sptr)
   return true;
 }
 
+bool
+parse_formals (const char **input, lambda_formals_t **sptr)
+{
+  // Syntax:
+  // <formals> ->
+  //             ( <identifier>* )
+  // |           ( <identifier>+ . <identifier> )
+  // |           <identifier>
+
+  const char *ptr = *input;
+
+  if (parse_lparen (&ptr))
+    {
+      
+    }
+
+  schptr_t id;
+  if (!parse_identifier (&ptr, &id))
+    return false;
+
+  
+  return true;
+}
+
+bool
+parse_lambda_expression (const char **input, schptr_t *sptr)
+{
+  // Syntax:
+  // <lambda expression> ->
+  //         ( lambda <formals> <body> )
+  const char *ptr = *input;
+
+  if (!parse_lparen (&ptr))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  if (! parse_char_seq (&ptr, "lambda"))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  lambda_formals_t *formals = NULL;
+  if (! parse_formals (&ptr, &formals))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  schptr_t body;
+  if (! parse_body (&ptr, &body))
+    return false;
+
+  (void) parse_whitespace (&ptr);
+
+  if (!parse_rparen (&ptr))
+    return false;
+
+  // create lambda structure
+
+  return true;
+}
