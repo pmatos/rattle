@@ -651,3 +651,37 @@ emit_asm_expr_seq (FILE *f, schptr_t sptr, size_t si, env_t *env)
   for (; s; s = s->next)
     emit_asm_expr (f, s->expr, si, env);
 }
+
+void
+emit_asm_lambda (FILE *f, schptr_t sptr, size_t si, env_t *env)
+{
+  schlambda_t *lambda = (schlambda_t *) sptr;
+  assert (lambda->type == SCH_LAMBDA);
+
+  // To emit a lambda:
+  // * create a new label for the lambda;
+  // * add to the environment a place for each argument of the lambda
+  //   TODO: what about rest and list arguments?
+  // * emit the body of the lambda
+  formals_t *formals = lambda->formals;
+  schptr_t body = lambda->body;
+
+  // For now only NORMAL arguments pls
+  if (formals->type != NORMAL)
+    err_unsupported ("non-positional arguments in lambda");
+
+  lambda_formals_normal_t *fs = (lambda_formals_normal_t *)formals;
+  size_t argoffset = WORD_SIZE;
+  env_t *nenv = env;
+  for (identifier_list_t *ids = fs->args; ids; ids = ids->next)
+    {
+      identifier_t *id = ids->id;
+      // So return value will be placed in si, and each of the arguments will
+      // be at si + n (for the nth-argument)
+      nenv = env_add (id, argoffset, nenv);
+      argoffset += WORD_SIZE;
+    }
+
+  
+  // Arguments have been handled
+  emit_asm_expression (
