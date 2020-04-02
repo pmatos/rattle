@@ -34,7 +34,7 @@ struct schprim;
 struct env;
 typedef void (*prim_emmiter) (FILE *, schptr_t, size_t, struct env *);
 
-typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_EXPR_SEQ, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
+typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_EXPR_SEQ, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2, SCH_LAMBDA } sch_type;
 typedef enum { LET, LETS, LETREC } let_t;
 
 typedef struct schtype
@@ -83,6 +83,12 @@ typedef struct schid
   char *name;
 } schid_t;
 
+typedef struct identifier_list
+{
+  schid_t *id;
+  struct identifier_list *next;
+} identifier_list_t;
+
 typedef struct binding_spec_list
 {
   schid_t *id;
@@ -110,9 +116,41 @@ typedef struct schexprseq
   expression_list_t *seq;
 } schexprseq_t;
 
+typedef enum { NORMAL, REST, LIST } lambda_formals_type;
+typedef struct lambda_formals_base
+{
+  lambda_formals_type type;
+} lambda_formals_t;
+
+typedef struct lambda_formals_normal
+{
+  struct lambda_formals_base;
+  identifier_list_t *args;
+} lambda_formals_normal_t;
+
+typedef struct lambda_formals_rest
+{
+  struct lambda_formals_base;
+  identifier_list_t *args;
+  schid_t *rest;
+} lambda_formals_rest_t;
+
+typedef struct lambda_formals_list
+{
+  struct lambda_formals_base;
+  schid_t *listid;
+} lambda_formals_list_t;
+
+typedef struct schlambda
+{
+  sch_type type;
+  lambda_formals_t *formals;
+  schptr_t body;
+} schlambda_t;
+
 void free_expression (schptr_t);
 void free_expression_list (expression_list_t *);
 void free_identifier (schid_t *);
+void free_identifier_list (identifier_list_t *);
 void free_binding_spec_list (binding_spec_list_t *);
-
 schid_t *clone_schid (const schid_t *);

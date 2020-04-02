@@ -628,7 +628,7 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
   size_t freesi = si; // currently free si
   for (binding_spec_list_t *bs = let->bindings; bs != NULL; bs = bs->next)
     {
-      emit_asm_expr (f, bs->expr, freesi, let->star_p ? nenv : env);
+      emit_asm_expr (f, bs->expr, freesi, let->let == LETS ? nenv : env);
 
       fprintf (f, "    movq %%rax, -%zu(%%rsp)\n", freesi);
 

@@ -144,3 +144,15 @@ clone_schid (const schid_t *id)
   clone->name = strdup (id->name);
   return clone;
 }
+
+void
+free_identifier_list (identifier_list_t *ids)
+{
+  while (ids)
+    {
+      identifier_list_t *tmp = ids;
+      ids = ids->next;
+      free_identifier (tmp->id);
+      free (tmp);
+    }
+}

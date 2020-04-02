@@ -1009,14 +1009,96 @@ parse_formals (const char **input, lambda_formals_t **sptr)
 
   if (parse_lparen (&ptr))
     {
-      
+      (void) parse_whitespace (&ptr);
+
+      // We are either going for ( <identifier>* ) or ( <identifier>+ . <identifier> )
+      identifier_list_t *ids = NULL;
+      identifier_list_t *last = NULL;
+
+      schptr_t idptr;
+      while (parse_identifier (&ptr, &idptr))
+        {
+          (void) parse_whitespace (&ptr);
+
+          schid_t *id = (schid_t *)idptr;
+          assert (id->type == SCH_ID);
+
+          identifier_list_t *node = alloc (sizeof *node);
+          node->id = id;
+          node->next = NULL;
+
+          if (!ids)
+            {
+              ids = node;
+              last = node;
+            }
+          else
+            {
+              last->next = node;
+              last = node;
+            }
+        }
+
+      (void) parse_whitespace (&ptr);
+
+      // Do we have a dot?
+      if (!parse_char (&ptr, '.'))
+        {
+          (void) parse_whitespace (&ptr);
+          // OK, no rest argument then
+          if (!parse_rparen (&ptr))
+            return false;
+
+          *input = ptr;
+
+          lambda_formals_normal_t *formals = alloc (sizeof *formals);
+          formals->type = NORMAL;
+          formals->args = ids;
+
+          *sptr = (lambda_formals_t *)formals;
+          return true;
+        }
+
+      // So now we need an identifier
+      schptr_t restid;
+      if (!parse_identifier (&ptr, &restid))
+        {
+          free_identifier_list (ids);
+          return false;
+        }
+
+      (void) parse_whitespace (&ptr);
+
+      if (!parse_rparen (&ptr))
+        {
+          free_identifier_list (ids);
+          return false;
+        }
+
+      *input = ptr;
+
+      lambda_formals_rest_t *formals = alloc (sizeof *formals);
+      formals->type = REST;
+
+      assert (ids != NULL);
+      formals->args = ids;
+      formals->rest = (schid_t *)restid;
+
+      *sptr = (lambda_formals_t *) formals;
+      return true;
     }
 
-  schptr_t id;
-  if (!parse_identifier (&ptr, &id))
+  schptr_t listid;
+  if (!parse_identifier (&ptr, &listid))
     return false;
 
-  
+  *input = ptr;
+
+  lambda_formals_list_t *formals = alloc (sizeof *formals);
+  formals->type = LIST;
+  formals->listid = (schid_t *)listid;
+
+  *sptr = (lambda_formals_t *) formals;
   return true;
 }
 
@@ -1033,7 +1115,7 @@ parse_lambda_expression (const char **input, schptr_t *sptr)
 
   (void) parse_whitespace (&ptr);
 
-  if (! parse_char_seq (&ptr, "lambda"))
+  if (! parse_char_sequence (&ptr, "lambda"))
     return false;
 
   (void) parse_whitespace (&ptr);
@@ -1053,7 +1135,14 @@ parse_lambda_expression (const char **input, schptr_t *sptr)
   if (!parse_rparen (&ptr))
     return false;
 
+  *input = ptr;
+
   // create lambda structure
+  schlambda_t *l = alloc (sizeof *l);
+  l->type = SCH_LAMBDA;
+  l->formals = formals;
+  l->body = body;
+  *sptr = (schptr_t) l;
 
   return true;
 }
