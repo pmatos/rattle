@@ -1140,6 +1140,7 @@ parse_lambda_expression (const char **input, schptr_t *sptr)
   // create lambda structure
   schlambda_t *l = alloc (sizeof *l);
   l->type = SCH_LAMBDA;
+  l->label = 
   l->formals = formals;
   l->body = body;
   *sptr = (schptr_t) l;

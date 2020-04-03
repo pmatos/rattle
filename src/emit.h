@@ -20,14 +20,6 @@
 
 #include "env.h"
 
-#if defined(__APPLE__) || defined(__MACH__)
-#  define ASM_SYMBOL_PREFIX "_"
-#elif defined(__linux__)
-#  define ASM_SYMBOL_PREFIX ""
-#else
-#  error "Unsupported platform"
-#endif
-
 // Primitive emitter prototypes
 void emit_asm_expr (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_epilogue (FILE *);
