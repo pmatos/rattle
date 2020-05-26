@@ -8,18 +8,18 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Check system width
       run: |
         gcc -o sizes scripts/sizes.c
         ./sizes
     - name: Build
       run: make
-    - uses: Bogdanp/setup-racket@v0.5
+    - uses: Bogdanp/setup-racket@v0.8
       with:
         architecture: 'x64'
         distribution: 'full'
         variant: 'CS'
-        version: '7.6'
+        version: '7.7'
     - name: Run Tests
       run: make test

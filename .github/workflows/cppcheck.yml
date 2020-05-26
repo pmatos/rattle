@@ -9,7 +9,7 @@ jobs:
     container: debian:buster-slim
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
         apt-get update
@@ -20,7 +20,7 @@ jobs:
       run: |
         cat cppcheck.log
         test ! -s "cppcheck.log"
-    - uses: actions/upload-artifact@master
+    - uses: actions/upload-artifact@v2
       if: failure()
       with:
         name: cppcheck-${{ github.sha }}

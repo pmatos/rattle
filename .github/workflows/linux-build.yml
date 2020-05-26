@@ -6,25 +6,25 @@ jobs:
   buildtest-glibc:
 
     runs-on: ubuntu-latest
-    container: debian:buster-slim
+    container: debian:sid-slim
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y make gcc gcc-8 g++ g++-8 sudo curl
+        apt-get install -y make gcc gcc-10 g++ g++-10 sudo curl
     - name: Build
       env:
         COVERAGE: 1
-        CC: gcc-8
+        CC: gcc-10
       run: make 
-    - uses: Bogdanp/setup-racket@v0.5
+    - uses: Bogdanp/setup-racket@v0.8
       with:
         architecture: 'x64'
         distribution: 'full'
         variant: 'CS'
-        version: '7.6'
+        version: '7.7'
     - name: Run Tests
       run: make test
     - uses: codecov/codecov-action@v1
@@ -40,7 +40,7 @@ jobs:
       options: --rm
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
         apk update
@@ -53,54 +53,54 @@ jobs:
   buildtest-vg:
 
     runs-on: ubuntu-latest
-    container: debian:buster-slim
+    container: debian:sid-slim
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y make gcc gcc-8 g++ g++-8 sudo curl valgrind
+        apt-get install -y make gcc gcc-10 g++ g++-10 sudo curl valgrind
     - name: Versions
       env:
-        CC: gcc-8
+        CC: gcc-10
       run: |
         cc --version
         valgrind --version
     - name: Build
-      run: make DEBUG=1 CC=gcc-8
-    - uses: Bogdanp/setup-racket@v0.5
+      run: make DEBUG=1 CC=gcc-10
+    - uses: Bogdanp/setup-racket@v0.8
       with:
         architecture: 'x64'
         distribution: 'full'
         variant: 'CS'
-        version: '7.6'
+        version: '7.7'
     - name: Run Tests
       run: make TEST_PREFIX='valgrind --tool=memcheck -q --leak-check=full --error-exitcode=35' test
 
   buildtest-ubsan:
 
     runs-on: ubuntu-latest
-    container: debian:buster-slim
+    container: debian:sid-slim
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
         apt-get update 
-        apt-get install -y make gcc gcc-8 g++ g++-8 sudo curl
+        apt-get install -y make gcc gcc-10 g++ g++-10 sudo curl
     - name: Versions
       env:
-        CC: gcc-8
+        CC: gcc-10
       run: |
         cc --version
     - name: Build
-      run: make CC=gcc-8 DEBUG=1 UBSAN=1
-    - uses: Bogdanp/setup-racket@v0.5
+      run: make CC=gcc-10 DEBUG=1 UBSAN=1
+    - uses: Bogdanp/setup-racket@v0.8
       with:
         architecture: 'x64'
         distribution: 'full'
         variant: 'CS'
-        version: '7.6'
+        version: '7.7'
     - name: Run Tests
       run: make test
