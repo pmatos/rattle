@@ -156,3 +156,35 @@ free_identifier_list (identifier_list_t *ids)
       free (tmp);
     }
 }
+
+void
+free_lambda_formals (lambda_formals_t *fs)
+{
+  switch (fs->type)
+    {
+    case NORMAL:
+      {
+        lambda_formals_normal_t *normal = (lambda_formals_normal_t *)fs;
+        free_identifier_list(normal->args);
+        free (normal);
+      }
+      break;
+    case REST:
+      {
+        lambda_formals_rest_t *rest = (lambda_formals_rest_t *)fs;
+        free_identifier (rest->rest);
+        free_identifier_list (rest->args);
+        free (rest);
+      }
+      break;
+    case LIST:
+      {
+        lambda_formals_list_t *lst = (lambda_formals_list_t *)fs;
+        free_identifier (lst->listid);
+        free (lst);
+      }
+      break;
+    default:
+      err_unreachable ("unknown lambda formals type");
+    }
+}

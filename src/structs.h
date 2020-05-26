@@ -120,7 +120,7 @@ typedef enum { NORMAL, REST, LIST } lambda_formals_type;
 typedef struct lambda_formals_base
 {
   lambda_formals_type type;
-} formals_t;
+} lambda_formals_t;
 
 typedef struct lambda_formals_normal
 {
@@ -145,7 +145,7 @@ typedef struct schlambda
 {
   sch_type type;
   char *label;
-  formals_t *formals;
+  lambda_formals_t *formals;
   schptr_t body;
 } schlambda_t;
 
@@ -154,4 +154,5 @@ void free_expression_list (expression_list_t *);
 void free_identifier (schid_t *);
 void free_identifier_list (identifier_list_t *);
 void free_binding_spec_list (binding_spec_list_t *);
+void free_lambda_formals (lambda_formals_t *);
 schid_t *clone_schid (const schid_t *);

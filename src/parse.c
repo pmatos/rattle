@@ -1128,12 +1128,19 @@ parse_lambda_expression (const char **input, schptr_t *sptr)
 
   schptr_t body;
   if (! parse_body (&ptr, &body))
-    return false;
+    {
+      free_lambda_formals (formals);
+      return false;
+    }
 
   (void) parse_whitespace (&ptr);
 
   if (!parse_rparen (&ptr))
-    return false;
+    {
+      free_lambda_formals (formals);
+      free_expression (body);
+      return false;
+    }
 
   *input = ptr;
 
