@@ -1,0 +1,2 @@
+%compiler_commands
+-Wno-microsoft-anon-tag
