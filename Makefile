@@ -86,6 +86,7 @@ btestcomp:
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/if.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/let.tests
 	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/lets.tests
+	racket tests/script/test.rkt -c "$(TEST_PREFIX) ./rattle -e --" tests/letrec.tests
 
 # AFL crash tests
 afltest:
@@ -96,7 +97,6 @@ itest:
 	$(TEST_PREFIX) ./rattle -o fx1 -c tests/fx1.rl && test `./fx1` = "1"
 	$(TEST_PREFIX) ./rattle -o fxadd1 -c tests/fxadd1.rl && test `./fxadd1` = "190"
 	$(TEST_PREFIX) ./rattle -o primitives-1 -c tests/primitives-1.rl && test `./primitives-1` = "#f"
-
 
 .PHONY: clean
 clean:
