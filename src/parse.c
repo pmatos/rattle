@@ -851,6 +851,7 @@ parse_expression (const char **input, schptr_t *sptr)
       parse_identifier (input, sptr) ||
       parse_if (input, sptr) ||
       parse_let_wo_id (input, sptr) ||
+      parse_lambda_expression (input, sptr) ||
       parse_procedure_call (input, sptr))
     return true;
 

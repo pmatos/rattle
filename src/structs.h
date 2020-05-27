@@ -26,6 +26,8 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
+#define GET_TYPE(x) ((schtype_t *)x)->type
+
 // Immediates are just represented by a single 64bit value
 typedef uint64_t sch_imm;
 
@@ -156,3 +158,12 @@ void free_identifier_list (identifier_list_t *);
 void free_binding_spec_list (binding_spec_list_t *);
 void free_lambda_formals (lambda_formals_t *);
 schid_t *clone_schid (const schid_t *);
+
+//
+// Lambda
+//
+static inline bool
+sch_lambda_p (schptr_t sptr)
+{
+  return sch_ptr_p (sptr) && GET_TYPE(sptr) == SCH_LAMBDA;
+}

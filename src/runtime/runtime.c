@@ -22,6 +22,7 @@
 #include <limits.h>
 
 #include "../common.h"
+#include "../structs.h"
 
 // Runtime entry point.
 // The compiler generated code is linked here.
@@ -77,6 +78,8 @@ print_ptr(schptr_t x)
     printf ("#t");
   else if (sch_imm_null_p (x))
     printf ("()");
+  else if (sch_lambda_p (x))
+    printf ("#<lambda>");
   else
     printf ("#<unknown 0x%08" PRIxPTR ">", x);
   printf ("\n");

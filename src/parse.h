@@ -40,7 +40,7 @@ bool parse_imm_fixnum (const char **, schptr_t *);
 bool parse_imm_char (const char **, schptr_t *);
 bool parse_if (const char **, schptr_t *);
 bool parse_procedure_call (const char **, schptr_t *);
-
+bool parse_lambda_expression (const char **, schptr_t *);
 
 // Helper parsing procedures
 

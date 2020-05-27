@@ -127,6 +127,9 @@ emit_asm_expr (FILE *f, schptr_t sptr, size_t si, env_t *env)
     case SCH_EXPR_SEQ:
       emit_asm_expr_seq (f, sptr, si, env);
       break;
+    case SCH_LAMBDA:
+      emit_asm_lambda (f, sptr, si, env);
+      break;
     default:
       fprintf (stderr, "unknown type 0x%08x\n", type);
       err_unreachable ("unknown type");
