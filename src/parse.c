@@ -20,10 +20,11 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include "memory.h"
 #include "err.h"
-#include "structs.h"
+#include "labels.h"
+#include "memory.h"
 #include "primitives.h"
+#include "structs.h"
 
 // Comments behave like whitespaces so they are removed with it
 bool
@@ -1147,7 +1148,7 @@ parse_lambda_expression (const char **input, schptr_t *sptr)
   // create lambda structure
   schlambda_t *l = alloc (sizeof *l);
   l->type = SCH_LAMBDA;
-  l->label = 
+  l->label = gen_new_label();
   l->formals = formals;
   l->body = body;
   *sptr = (schptr_t) l;
