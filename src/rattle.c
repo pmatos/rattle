@@ -14,25 +14,26 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
+#include <assert.h>
+#include <ctype.h>
+#include <dlfcn.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <ctype.h>
-#include <assert.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <dlfcn.h>
+#include <unistd.h>
 
-#include "parse.h"
-#include "structs.h"
-#include "memory.h"
 #include "emit.h"
 #include "err.h"
+#include "labels.h"
+#include "memory.h"
+#include "parse.h"
+#include "structs.h"
 
 #include "common.h"
 #include "config.h"
