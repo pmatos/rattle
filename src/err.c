@@ -42,6 +42,13 @@ err_parse (const char *s)
   exit (EXIT_FAILURE);
 }
 
+void
+err_open (const char *s)
+{
+  fprintf (stderr, "error: cannot open `%s'\n", s);
+  exit (EXIT_FAILURE);
+}
+
 __attribute__((noreturn)) void
 err_unreachable (const char *s)
 {

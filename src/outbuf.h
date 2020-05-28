@@ -25,7 +25,7 @@
 // Implements an output buffer
 // All of the generated assembly is emitted to the buffer and in the end
 // the buffer is written to disk
-
+// sections are ordered alphabetically in array field `scs`
 struct outbuf
 {
   struct section **scs;  // sections
@@ -35,7 +35,9 @@ struct outbuf
 #define OUTBUF_INITIAL_CAP 256
 
 struct outbuf *make_output_buffer (void);
-void free_output_buffer (void);
-bool output_buffer_add_section (char *, struct outbuf *);
-struct section *find_section (char *, struct outbuf *);
-void write_output_buffer (FILE *);
+void free_output_buffer (struct outbuf *);
+void grow_output_buffer (struct outbuf *);
+bool output_buffer_add_section (struct section *, struct outbuf *);
+struct section *find_section (const char *, struct outbuf *);
+void write_output_buffer (FILE *, struct outbuf *);
+void write_output_buffer_to_path (const char *, struct outbuf *);
