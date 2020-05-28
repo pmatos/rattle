@@ -54,4 +54,4 @@ void emit_asm_prim_charlt (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_prim_charle (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_prim_chargt (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_prim_charge (FILE *, schptr_t, size_t, env_t *);
-
+void emit_asm_lambda (FILE *, schptr_t, size_t, env_t *);

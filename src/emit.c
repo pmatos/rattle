@@ -646,3 +646,35 @@ emit_asm_expr_seq (FILE *f, schptr_t sptr, size_t si, env_t *env)
     emit_asm_expr (f, s->expr, si, env);
 }
 
+/* Function that emits assembly code for a lambda
+   The way it works is that the lambda body is emitted and 
+   slots are created in the environment for the formals and the return
+   value. 
+   
+   We leave one stack slot available for the return value and 
+   add the formals right after that. One formal per slot on the stack
+*/ 
+void
+emit_asm_lambda (FILE *f, schptr_t sptr, size_t si, env_t *env)
+{
+  schlambda_t *lambda = (schlambda_t *)sptr;
+  assert (lambda->type == SCH_LAMBDA);
+  
+  // emit label
+  emit_asm_label (f, lambda->label);
+
+  size_t firstargsi = si + WORD_BYTES;
+  
+  // emit space in stack for each formal
+  // TODO: unsure how to deal with rest formals and list formals at the moment so we'll ignore them
+  lambda_formals_t *formals = lambda->formals;
+  
+  assert (formals->type == FORMALS_NORMAL); // we break if we use something else
+  lambda_formals_normal_t *nformals = (lambda_formals_normal_t *)formals;
+  identifier_list_t *args = nformals->args;
+  for (size_t argsi = firstargsi; args != NULL; args = args->next, argsi += WORD_BYTES)
+    env_add (args->id, argsi, env);
+
+  // emit body
+  emit_asm_expr_seq(f, lambda->body, si, env);
+}

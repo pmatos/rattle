@@ -118,7 +118,7 @@ typedef struct schexprseq
   expression_list_t *seq;
 } schexprseq_t;
 
-typedef enum { NORMAL, REST, LIST } lambda_formals_type;
+typedef enum { FORMALS_NORMAL, FORMALS_REST, FORMALS_LIST } lambda_formals_type;
 typedef struct lambda_formals_base
 {
   lambda_formals_type type;
@@ -156,6 +156,7 @@ void free_expression_list (expression_list_t *);
 void free_identifier (schid_t *);
 void free_identifier_list (identifier_list_t *);
 void free_binding_spec_list (binding_spec_list_t *);
+void free_lambda (schlambda_t *);
 void free_lambda_formals (lambda_formals_t *);
 schid_t *clone_schid (const schid_t *);
 

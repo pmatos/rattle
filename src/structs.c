@@ -118,8 +118,12 @@ free_expression (schptr_t e)
       free_prim_eval2 ((schprim_eval2_t *) e);
       break;
 
+    case SCH_LAMBDA:
+      free_lambda ((schlambda_t *) e);
+      break;
+      
     default:
-      err_unreachable ("unknown type");
+      err_unreachable ("unknown imm/prim type");
     }
 }
 
@@ -158,18 +162,26 @@ free_identifier_list (identifier_list_t *ids)
 }
 
 void
+free_lambda (schlambda_t *l)
+{
+  free (l->label);
+  free_lambda_formals (l->formals);
+  free_expression (l->body);
+}
+
+void
 free_lambda_formals (lambda_formals_t *fs)
 {
   switch (fs->type)
     {
-    case NORMAL:
+    case FORMALS_NORMAL:
       {
         lambda_formals_normal_t *normal = (lambda_formals_normal_t *)fs;
         free_identifier_list(normal->args);
         free (normal);
       }
       break;
-    case REST:
+    case FORMALS_REST:
       {
         lambda_formals_rest_t *rest = (lambda_formals_rest_t *)fs;
         free_identifier (rest->rest);
@@ -177,7 +189,7 @@ free_lambda_formals (lambda_formals_t *fs)
         free (rest);
       }
       break;
-    case LIST:
+    case FORMALS_LIST:
       {
         lambda_formals_list_t *lst = (lambda_formals_list_t *)fs;
         free_identifier (lst->listid);

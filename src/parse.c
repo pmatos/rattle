@@ -397,7 +397,7 @@ parse_body (const char **input, schptr_t *sptr)
 
   // a body is a sequence of definitions followed by a
   // non empty sequence of expressions
-  // TODO skipping definitions for now
+  // TODO: skipping definitions for now
   /* definition_list_t *defs = NULL; */
   /* definition_t def; */
   /* while (parse_definition (ptr, *def)) */
@@ -1054,7 +1054,7 @@ parse_formals (const char **input, lambda_formals_t **sptr)
           *input = ptr;
 
           lambda_formals_normal_t *formals = alloc (sizeof *formals);
-          formals->type = NORMAL;
+          formals->type = FORMALS_NORMAL;
           formals->args = ids;
 
           *sptr = (lambda_formals_t *)formals;
@@ -1080,7 +1080,7 @@ parse_formals (const char **input, lambda_formals_t **sptr)
       *input = ptr;
 
       lambda_formals_rest_t *formals = alloc (sizeof *formals);
-      formals->type = REST;
+      formals->type = FORMALS_REST;
 
       assert (ids != NULL);
       formals->args = ids;
@@ -1097,7 +1097,7 @@ parse_formals (const char **input, lambda_formals_t **sptr)
   *input = ptr;
 
   lambda_formals_list_t *formals = alloc (sizeof *formals);
-  formals->type = LIST;
+  formals->type = FORMALS_LIST;
   formals->listid = (schid_t *)listid;
 
   *sptr = (lambda_formals_t *) formals;
