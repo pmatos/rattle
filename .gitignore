@@ -53,3 +53,11 @@ dkms.conf
 
 # Emacs related
 *~
+
+# CCLS related
+.ccls-cache/
+compile_commands.json
+
+# Make related
+.depend
+config.h
