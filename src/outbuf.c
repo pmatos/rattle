@@ -41,6 +41,13 @@ free_output_buffer (struct outbuf *ob)
   free (ob);
 }
 
+void
+grow_output_buffer (struct outbuf *ob)
+{
+  ob->cap *= OUTBUF_INITIAL_CAP;
+  ob->scs = (struct section **) grow (ob->scs, ob->cap);
+}
+
 bool
 output_buffer_add_section (struct section *s, struct outbuf *ob)
 {
