@@ -49,7 +49,7 @@ free_section (struct section *s)
 
   free (s->name);
   for (size_t i = 0; i < s->sz; i++)
-    free (s->insn[i]);
+    free (s->insns[i]);
   free (s);
 }
 
