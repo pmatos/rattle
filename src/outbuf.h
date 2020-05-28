@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "section.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -23,22 +25,6 @@
 // Implements an output buffer
 // All of the generated assembly is emitted to the buffer and in the end
 // the buffer is written to disk
-
-struct section
-{
-  char *name;
-  char **insns;
-  size_t sz;
-  size_t cap;
-};
-#define SECTION_INITIAL_CAP 128
-#define SECTION_CAP_MULTIPLIER 1.2
-
-struct section *make_section (char *);
-void free_section (struct section *);
-void section_grow (struct section *);
-void emit_insn (char *, struct section *);
-void write_section (FILE *, struct section *);
 
 struct outbuf
 {
