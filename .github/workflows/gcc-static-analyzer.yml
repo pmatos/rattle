@@ -10,6 +10,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Check GCC version
+      run: gcc --version -v
     - name: Scan
       env:
         CFLAGS: -fanalyzer -Wanalyzer-too-complex
