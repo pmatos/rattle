@@ -14,7 +14,7 @@ jobs:
       run: gcc --version -v
     - name: Scan
       env:
-        CFLAGS: -fanalyzer -Wanalyzer-too-complex
+        CFLAGS: -fanalyzer
         CC: gcc
       run: make DEBUG=1
 
