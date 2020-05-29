@@ -1,0 +1,19 @@
+name: GCC Static Analysis
+
+on: [push, pull_request]
+
+jobs:
+  scanbuild:
+
+    runs-on: ubuntu-latest
+    container: pmatos/gcc-analyzer:latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Scan
+      run: CFLAGS=-fanalyzer -Wanalyzer-too-complex make DEBUG=1
+
+  
+        
+
+  
