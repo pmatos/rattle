@@ -35,7 +35,7 @@
 
 // Emit assembly for function decorations - prologue and epilogue
 void
-emit_asm_prologue (FILE *f, const char *name)
+emit_asm_prologue (struct outbuf *ob, const char *name)
 {
 #if defined(__APPLE__) || defined(__MACH__)
   fprintf (f, "    .section	__TEXT,__text,regular,pure_instructions\n");

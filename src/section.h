@@ -20,7 +20,7 @@
 
 struct section
 {
-  char *name;
+  char *name;    // asm label
   char **insns;
   size_t sz;
   size_t cap;
