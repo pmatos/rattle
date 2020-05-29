@@ -2,45 +2,47 @@
 .PHONY: all
 all: rattle runtime.o
 
+CFLAGS := $(CFLAGS)
+
 # Flags
-CFLAGS = -std=gnu11 -fms-extensions
-EXTRA_CFLAGS =
-LDFLAGS = -ldl
+CFLAGS += -std=gnu11 -fms-extensions
+EXTRA_CFLAGS :=
+LDFLAGS := -ldl
 
 # If clang we need to add a warning disable
-CCNAME = $(findstring clang,$(shell $(CC) --version))
+CCNAME := $(findstring clang,$(shell $(CC) --version))
 ifeq ($(CCNAME),clang)
-CFLAGS := $(CFLAGS) -Wno-microsoft-anon-tag
+CFLAGS += -Wno-microsoft-anon-tag
 endif
 
 ifdef DEBUG
-CFLAGS := $(CFLAGS) -O0 -g
-LDFLAGS := $(LDFLAGS)
+CFLAGS += $(CFLAGS) -O0 -g
 
 # UBSAN only works when DEBUG=1
 ifdef UBSAN
-CFLAGS := $(CFLAGS) -fsanitize=undefined
-LDFLAGS := $(LDFLAGS) -fsanitize=undefined
-UBSANLIB :="-lubsan"
+CFLAGS +=  -fsanitize=undefined
+LDFLAGS += -fsanitize=undefined
+UBSANLIB := "-lubsan"
 endif
 
 else ifdef COVERAGE	
-CFLAGS := $(CFLAGS) -O0 -g
-LDFLAGS := $(LDFLAGS) --coverage 
+CFLAGS += -O0 -g
+LDFLAGS += --coverage
 EXTRA_CFLAGS := --coverage
+
 else
 CPPFLAGS := -DNDEBUG
-CFLAGS := $(CFLAGS) -O3 -flto -march=native
-LDFLAGS := $(LDFLAGS) $(CFLAGS)
+CFLAGS += -O3 -flto -march=native
+LDFLAGS += $(CFLAGS)
 endif
 
-CFLAGS := $(CFLAGS) -Werror -Wall -Wextra -Wshadow
+CFLAGS += -Werror -Wall -Wextra -Wshadow
 
 # Sources and Dependencies
 # TODO: make runtime.c also depend on headers
 
-SRCS = $(wildcard src/*.c)
-OBJS = $(SRCS:.c=.o)
+SRCS := $(wildcard src/*.c)
+OBJS := $(SRCS:.c=.o)
 
 .PHONY: depend
 depend: .depend

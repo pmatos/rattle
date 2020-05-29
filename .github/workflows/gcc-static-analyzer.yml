@@ -1,0 +1,24 @@
+name: GCC Static Analysis
+
+on: [push, pull_request]
+
+jobs:
+  gcc-analyze:
+
+    runs-on: ubuntu-latest
+    container: pmatos/gcc-analyzer:latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Check GCC version
+      run: gcc --version -v
+    - name: Scan
+      env:
+        CFLAGS: -fanalyzer
+        CC: gcc
+      run: make DEBUG=1
+
+  
+        
+
+  
