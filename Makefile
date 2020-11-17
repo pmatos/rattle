@@ -5,7 +5,7 @@ all: rattle runtime.o
 CFLAGS := $(CFLAGS)
 
 # Flags
-CFLAGS += -std=gnu11 -fms-extensions
+CFLAGS += -std=gnu11 -fms-extensions -D_DEFAULT_SOURCE
 EXTRA_CFLAGS :=
 LDFLAGS := -ldl
 
