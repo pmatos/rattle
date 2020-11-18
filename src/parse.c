@@ -17,13 +17,13 @@
 #include "parse.h"
 
 #include <ctype.h>
-#include <string.h>
 #include <stdlib.h>
+#include <string.h>
 
-#include "memory.h"
 #include "err.h"
-#include "structs.h"
+#include "memory.h"
 #include "primitives.h"
+#include "structs.h"
 
 // Comments behave like whitespaces so they are removed with it
 bool
@@ -49,8 +49,7 @@ parse_letter (const char **input)
 {
   char i = **input;
 
-  if ((i >= 'a' && i <= 'z') ||
-      (i >= 'A' && i <= 'Z'))
+  if ((i >= 'a' && i <= 'z') || (i >= 'A' && i <= 'Z'))
     {
       (*input)++;
       return true;
@@ -111,9 +110,8 @@ parse_special_subsequent (const char **input)
   //   <explicit sign>
   // | .
   // | @
-  return parse_explicit_sign (input)
-    || parse_char (input, '.')
-    || parse_char (input, '@');
+  return parse_explicit_sign (input) || parse_char (input, '.')
+         || parse_char (input, '@');
 }
 
 bool
@@ -144,9 +142,8 @@ parse_subsequent (const char **input)
   //    <initial>
   // |  <digit>
   // |  <special subsequent>
-  return parse_initial (input)
-    || parse_digit (input)
-    || parse_special_subsequent (input);
+  return parse_initial (input) || parse_digit (input)
+         || parse_special_subsequent (input);
 }
 
 bool
@@ -192,7 +189,8 @@ parse_hex_scalar_value (const char **input)
   if (!parse_hex_digit (input))
     return false;
 
-  while (parse_hex_digit (input));
+  while (parse_hex_digit (input))
+    ;
   return true;
 }
 
@@ -201,17 +199,17 @@ parse_inline_hex_escape (const char **input)
 {
   // Parses an expression as follows:
   // \x <hex scalar value>
-  return parse_char_sequence (input, "\\x") && parse_hex_scalar_value(input);
+  return parse_char_sequence (input, "\\x") && parse_hex_scalar_value (input);
 }
 
 bool
 parse_mnemonic_escape (const char **input)
 {
   return parse_char_sequence (input, "\\a")
-    || parse_char_sequence (input, "\\b")
-    || parse_char_sequence (input, "\\t")
-    || parse_char_sequence (input, "\\n")
-    || parse_char_sequence (input, "\\r");
+         || parse_char_sequence (input, "\\b")
+         || parse_char_sequence (input, "\\t")
+         || parse_char_sequence (input, "\\n")
+         || parse_char_sequence (input, "\\r");
 }
 
 bool
@@ -223,7 +221,7 @@ parse_symbol_element (const char **input)
   // | <mnemonic excape>
   // | \|
 
-  if (! **input)
+  if (!**input)
     return false;
 
   if (**input != '|' && **input != '\\')
@@ -237,8 +235,7 @@ parse_symbol_element (const char **input)
       return true;
     }
   else
-    return parse_inline_hex_escape (input)
-      || parse_mnemonic_escape (input);
+    return parse_inline_hex_escape (input) || parse_mnemonic_escape (input);
 }
 
 bool
@@ -248,9 +245,8 @@ parse_sign_subsequent (const char **input)
   // <initial>
   // | <explicit sign>
   // | @
-  return parse_initial (input)
-    || parse_explicit_sign (input)
-    || parse_char (input, '@');
+  return parse_initial (input) || parse_explicit_sign (input)
+         || parse_char (input, '@');
 }
 
 bool
@@ -269,25 +265,25 @@ parse_peculiar_identifier (const char **input)
   // | <explicit sign> <sign subsequent> <subsequent>*
   // | <explicit sign> . <dot subsequent> <subsequent>*
   // | . <dot subsequent> <subsequent>*
-  if (parse_explicit_sign (&ptr) &&
-      parse_sign_subsequent (&ptr))
+  if (parse_explicit_sign (&ptr) && parse_sign_subsequent (&ptr))
     {
-      while (parse_subsequent (&ptr));
+      while (parse_subsequent (&ptr))
+        ;
       *input = ptr;
       return true;
     }
-  else if (parse_explicit_sign (&ptr) &&
-           parse_char (&ptr, '.') &&
-           parse_dot_subsequent (&ptr))
+  else if (parse_explicit_sign (&ptr) && parse_char (&ptr, '.')
+           && parse_dot_subsequent (&ptr))
     {
-      while (parse_subsequent (&ptr));
+      while (parse_subsequent (&ptr))
+        ;
       *input = ptr;
       return true;
     }
-  else if (parse_char (&ptr, '.') &&
-           parse_dot_subsequent (&ptr))
+  else if (parse_char (&ptr, '.') && parse_dot_subsequent (&ptr))
     {
-      while (parse_subsequent (&ptr));
+      while (parse_subsequent (&ptr))
+        ;
       *input = ptr;
       return true;
     }
@@ -312,12 +308,14 @@ parse_identifier (const char **input, schptr_t *sptr)
   // |  <peculiar identifier>
   if (parse_initial (&ptr))
     {
-      while (parse_subsequent (&ptr));
+      while (parse_subsequent (&ptr))
+        ;
       id = strndup (*input, ptr - *input);
     }
   else if (parse_vertical_line (&ptr))
     {
-      while (parse_symbol_element (&ptr));
+      while (parse_symbol_element (&ptr))
+        ;
       if (parse_vertical_line (&ptr))
         id = strndup (*input, ptr - *input);
     }
@@ -328,12 +326,12 @@ parse_identifier (const char **input, schptr_t *sptr)
     return false;
 
   // Successfully parsed an identifier so we can now create it
-  schid_t *sid = (schid_t *) alloc (sizeof *sid);
+  schid_t *sid = (schid_t *)alloc (sizeof *sid);
 
   sid->type = SCH_ID;
   sid->name = id;
 
-  *sptr = (schptr_t) sid;
+  *sptr = (schptr_t)sid;
   *input = ptr;
   return true;
 }
@@ -345,18 +343,18 @@ parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
 
   // Parses an expression as follows:
   // (<identifier> <expression>)
-  if (!parse_lparen(&ptr))
+  if (!parse_lparen (&ptr))
     return false;
 
   // skip possible whitespace between lparen and the identifier
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   schptr_t identifier;
   if (!parse_identifier (&ptr, &identifier))
     return false;
 
   // skip possible whitespace between identifier and expression
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   schptr_t expression;
   if (!parse_expression (&ptr, &expression))
@@ -366,7 +364,7 @@ parse_binding_spec (const char **input, schptr_t *left, schptr_t *right)
     }
 
   // skip possible whitespace between expression and rparen
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   if (!parse_rparen (&ptr))
     {
@@ -416,11 +414,11 @@ parse_body (const char **input, schptr_t *sptr)
   elst->next = NULL;
   last = elst;
 
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   while (parse_expression (&ptr, &e))
     {
-      (void) parse_whitespace (&ptr);
+      (void)parse_whitespace (&ptr);
 
       expression_list_t *n = alloc (sizeof (*n));
       n->expr = e;
@@ -434,7 +432,7 @@ parse_body (const char **input, schptr_t *sptr)
   schexprseq_t *seq = alloc (sizeof (*seq));
   seq->type = SCH_EXPR_SEQ;
   seq->seq = elst;
-  *sptr = (schptr_t) seq;
+  *sptr = (schptr_t)seq;
 
   return true;
 }
@@ -445,7 +443,7 @@ parse_command (const char **input, schptr_t *sptr)
   // Syntax:
   // <command> -> <expression>
 
-  return parse_expression(input, sptr);
+  return parse_expression (input, sptr);
 }
 
 bool
@@ -485,11 +483,11 @@ parse_program (const char **input, schptr_t *sptr)
   elst->next = NULL;
   last = elst;
 
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   while (parse_command_or_definition (&ptr, &e))
     {
-      (void) parse_whitespace (&ptr);
+      (void)parse_whitespace (&ptr);
 
       expression_list_t *n = alloc (sizeof (*n));
       n->expr = e;
@@ -503,7 +501,7 @@ parse_program (const char **input, schptr_t *sptr)
   schexprseq_t *seq = alloc (sizeof (*seq));
   seq->type = SCH_EXPR_SEQ;
   seq->seq = elst;
-  *sptr = (schptr_t) seq;
+  *sptr = (schptr_t)seq;
 
   return true;
 }
@@ -519,7 +517,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
     return false;
 
   // skip possible whitespace between lparen and let keyword
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   bool letstar = false;
   if (parse_char_sequence (&ptr, "let*"))
@@ -528,7 +526,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
     return false;
 
   // skip possible whitespace between let and lparen
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   if (!parse_lparen (&ptr))
     return false;
@@ -546,10 +544,10 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
         break;
 
       // skip possible whitespace between binding specs
-      (void) parse_whitespace (&ptr);
+      (void)parse_whitespace (&ptr);
 
       binding_spec_list_t *b = alloc (sizeof (*b));
-      b->id = (schid_t *) id;
+      b->id = (schid_t *)id;
       b->expr = expr;
       b->next = NULL;
 
@@ -566,7 +564,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
     }
 
   // skip possible whitespace between last binding spec and rparen
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   if (!parse_rparen (&ptr))
     {
@@ -575,7 +573,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
     }
 
   // skip possible whitespace between rparen and body
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   if (!parse_body (&ptr, &body))
     {
@@ -584,7 +582,7 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
     }
 
   // skip possible whitespace between body and rparen
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   if (!parse_rparen (&ptr))
     {
@@ -596,13 +594,13 @@ parse_let_wo_id (const char **input, schptr_t *sptr)
   // Parse of let successful and complete
   *input = ptr;
 
-  schlet_t *l = (schlet_t *) alloc (sizeof (*l));
+  schlet_t *l = (schlet_t *)alloc (sizeof (*l));
   l->type = SCH_LET;
   l->star_p = letstar;
   l->bindings = bindings;
   l->body = body;
 
-  *sptr = (schptr_t) l;
+  *sptr = (schptr_t)l;
 
   return true;
 }
@@ -617,13 +615,13 @@ parse_if (const char **input, schptr_t *sptr)
     return false;
 
   // skip possible whitespace between lparen and if keyword
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
-  if (! parse_char_sequence (&ptr, "if"))
+  if (!parse_char_sequence (&ptr, "if"))
     return false;
 
   // skip whitespace between if identifier and condition
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   schptr_t condition;
   schptr_t thenv;
@@ -633,33 +631,33 @@ parse_if (const char **input, schptr_t *sptr)
     return false;
 
   // skip whitespace between condition and then-value
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   if (!parse_expression (&ptr, &thenv))
-      return false;
+    return false;
 
   // skip whitespace between then-value and else-value
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   if (!parse_expression (&ptr, &elsev))
     return false;
 
   // skip whitespace between else-value and right paren
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
-  if (! parse_rparen (&ptr))
+  if (!parse_rparen (&ptr))
     return false;
 
   // We parsed all we wanted now, so prepare return value
   *input = ptr;
-  schif_t *ifv = (schif_t *) alloc (sizeof *ifv);
+  schif_t *ifv = (schif_t *)alloc (sizeof *ifv);
 
   ifv->type = SCH_IF;
   ifv->condition = condition;
   ifv->thenv = thenv;
   ifv->elsev = elsev;
 
-  *sptr = (schptr_t) ifv;
+  *sptr = (schptr_t)ifv;
   return true;
 }
 
@@ -671,7 +669,7 @@ parse_imm_bool (const char **input, schptr_t *imm)
     {
       if ((*input)[1] == 't' || (*input)[1] == 'f')
         {
-          *imm = sch_encode_imm_bool((*input)[1] == 't');
+          *imm = sch_encode_imm_bool ((*input)[1] == 't');
           *input += 2;
           return true;
         }
@@ -683,7 +681,7 @@ parse_imm_bool (const char **input, schptr_t *imm)
 bool
 parse_imm_fixnum (const char **input, schptr_t *imm)
 {
-  const char *sign  = NULL;
+  const char *sign = NULL;
   bool seen_num = false;
   const char *ptr = *input;
 
@@ -693,7 +691,7 @@ parse_imm_fixnum (const char **input, schptr_t *imm)
       ptr++;
     }
   uint64_t v = 0;
-  for (; isdigit(*ptr); ptr++)
+  for (; isdigit (*ptr); ptr++)
     {
       seen_num = true;
       v = (v * 10) + (*ptr - '0');
@@ -701,7 +699,7 @@ parse_imm_fixnum (const char **input, schptr_t *imm)
 
   if (seen_num)
     {
-      int64_t fx =  (int64_t) v;
+      int64_t fx = (int64_t)v;
       if (sign && *sign == '-')
         fx = -v;
 
@@ -770,7 +768,7 @@ parse_imm_char (const char **input, schptr_t *imm)
           c = 0x9;
           *input += 5;
         }
-      else if (isascii(ptr[2])) // Simple case: #\X where X is ascii
+      else if (isascii (ptr[2])) // Simple case: #\X where X is ascii
         {
           c = (*input)[2];
           *input += 3;
@@ -791,8 +789,7 @@ parse_imm_char (const char **input, schptr_t *imm)
 bool
 parse_imm_null (const char **input, schptr_t *imm)
 {
-  if ((*input)[0] == '(' &&
-      (*input)[1] == ')')
+  if ((*input)[0] == '(' && (*input)[1] == ')')
     {
       *input += 2;
       *imm = sch_encode_imm_null ();
@@ -805,11 +802,8 @@ parse_imm_null (const char **input, schptr_t *imm)
 bool
 parse_imm (const char **input, schptr_t *imm)
 {
-  return
-  parse_imm_fixnum (input, imm) ||
-    parse_imm_bool (input, imm) ||
-    parse_imm_null (input, imm) ||
-    parse_imm_char (input, imm);
+  return parse_imm_fixnum (input, imm) || parse_imm_bool (input, imm)
+         || parse_imm_null (input, imm) || parse_imm_char (input, imm);
 }
 
 bool
@@ -844,11 +838,9 @@ parse_expression (const char **input, schptr_t *sptr)
   //   * an if conditional
   // or a parenthesized expression
 
-  if (parse_imm (input, sptr) ||
-      parse_identifier (input, sptr) ||
-      parse_if (input, sptr) ||
-      parse_let_wo_id (input, sptr) ||
-      parse_procedure_call (input, sptr))
+  if (parse_imm (input, sptr) || parse_identifier (input, sptr)
+      || parse_if (input, sptr) || parse_let_wo_id (input, sptr)
+      || parse_procedure_call (input, sptr))
     return true;
 
   return false;
@@ -877,13 +869,13 @@ parse_procedure_call (const char **input, schptr_t *sptr)
   if (!parse_lparen (&ptr))
     return false;
 
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   schptr_t op;
   if (!parse_operator (&ptr, &op))
     return false;
 
-  (void) parse_whitespace (&ptr);
+  (void)parse_whitespace (&ptr);
 
   // Parse zero or more arguments : the operands
   // Gathers a list of expressions with arguments
@@ -894,7 +886,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
   while (parse_operand (&ptr, &e))
     {
       noperands++;
-      (void) parse_whitespace (&ptr);
+      (void)parse_whitespace (&ptr);
 
       expression_list_t *node = alloc (sizeof *node);
       node->expr = e;
@@ -918,7 +910,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
 
   // Ensure that we support these types of procedure calls
   // Currently operator should be a primitive
-  schid_t *id = (schid_t *) op;
+  schid_t *id = (schid_t *)op;
   if (sch_imm_p (op) || id->type != SCH_ID)
     {
       fprintf (stderr, "unsupported operator type for procedure call\n");
@@ -926,7 +918,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
     }
 
   const schprim_t *prim = NULL;
-  for(size_t pi = 0; pi < primitives_count; pi++)
+  for (size_t pi = 0; pi < primitives_count; pi++)
     {
       const schprim_t *p = &(primitives[pi]);
       if (!strcmp (id->name, p->name))
@@ -945,9 +937,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
   if (prim->argcount != noperands)
     {
       fprintf (stderr, "too many arguments to `%s', expected %ud, got %ud\n",
-               prim->name,
-               prim->argcount,
-               noperands);
+               prim->name, prim->argcount, noperands);
       exit (EXIT_FAILURE);
     }
 
@@ -964,7 +954,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
         p1->type = SCH_PRIM_EVAL1;
         p1->prim = prim;
         p1->arg1 = es->expr;
-        *sptr = (schptr_t) p1;
+        *sptr = (schptr_t)p1;
       }
       break;
     case 2:
@@ -974,7 +964,7 @@ parse_procedure_call (const char **input, schptr_t *sptr)
         p2->prim = prim;
         p2->arg1 = es->expr;
         p2->arg2 = es->next->expr;
-        *sptr = (schptr_t) p2;
+        *sptr = (schptr_t)p2;
       }
       break;
     default:
@@ -993,4 +983,3 @@ parse_procedure_call (const char **input, schptr_t *sptr)
 
   return true;
 }
-

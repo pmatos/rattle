@@ -18,6 +18,4 @@
 
 void err_oom (void);
 void err_parse (const char *);
-__attribute__((noreturn)) void err_unreachable (const char *);
-
-
+__attribute__ ((noreturn)) void err_unreachable (const char *);

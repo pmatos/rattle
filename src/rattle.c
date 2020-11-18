@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
+#include <assert.h>
+#include <ctype.h>
+#include <dlfcn.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
-#include <errno.h>
-#include <stdint.h>
-#include <inttypes.h>
-#include <ctype.h>
-#include <assert.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <dlfcn.h>
+#include <unistd.h>
 
-#include "parse.h"
-#include "structs.h"
-#include "memory.h"
 #include "emit.h"
 #include "err.h"
+#include "memory.h"
+#include "parse.h"
+#include "structs.h"
 
 #include "common.h"
 #include "config.h"
@@ -43,21 +43,18 @@
 static const char *CC = "/usr/bin/cc";
 
 // Compiler main entry point file
-void __attribute__((noreturn))
-usage (const char *prog)  {
-  fprintf(stderr, "rattle version %d.%d\n", VERSION_MAJOR, VERSION_MINOR);
-  fprintf(stderr, "Usage: %s [-hec] [expression ...]\n", prog);
-  exit(EXIT_FAILURE);
+void __attribute__ ((noreturn)) usage (const char *prog)
+{
+  fprintf (stderr, "rattle version %d.%d\n", VERSION_MAJOR, VERSION_MINOR);
+  fprintf (stderr, "Usage: %s [-hec] [expression ...]\n", prog);
+  exit (EXIT_FAILURE);
 }
 
-void __attribute__((noreturn))
-help (const char *prog) {
-  usage(prog);
-}
+void __attribute__ ((noreturn)) help (const char *prog) { usage (prog); }
 
 // Prototypes
-void evaluate(const char *);
-void compile(const char *, const char *);
+void evaluate (const char *);
+void compile (const char *, const char *);
 void compile_program (const char *);
 
 // TODO find correct posix value
@@ -68,7 +65,8 @@ static bool dump_p = false;
 static bool save_temps_p = false;
 
 int
-main (int argc, char *argv[]) {
+main (int argc, char *argv[])
+{
 
   bool compile_p = false;
   bool evaluate_p = false;
@@ -76,7 +74,7 @@ main (int argc, char *argv[]) {
   char output[FILE_PATH_MAX];
 
   int opt;
-  while ((opt = getopt(argc, argv, "hdsec:o:")) != -1)
+  while ((opt = getopt (argc, argv, "hdsec:o:")) != -1)
     {
       switch (opt)
         {
@@ -140,7 +138,6 @@ main (int argc, char *argv[]) {
   return 0;
 }
 
-
 ///////////////////////////////////////////////////////////////////////
 //
 // Section Compilation and Evaluation
@@ -155,16 +152,18 @@ const char *find_system_tmpdir (void);
 
 // Evaluation
 void
-evaluate(const char *cmd)
+evaluate (const char *cmd)
 {
-  compile_program(cmd);
+  compile_program (cmd);
 }
 
 char *
 output_asm (schptr_t sptr)
 {
   const char *tmpdir = find_system_tmpdir ();
-  char itemplate[FILE_PATH_MAX] = { 0, };
+  char itemplate[FILE_PATH_MAX] = {
+    0,
+  };
   strncpy (itemplate, tmpdir, FILE_PATH_MAX);
   strncat (itemplate, "/rattleXXXXXX.s", FILE_PATH_MAX - strlen (tmpdir));
   itemplate[FILE_PATH_MAX - 1] = '\0';
@@ -220,7 +219,7 @@ read_file_to_mem (const char *path)
   // read file contents to memory
   const size_t blocksize = 1024;
   size_t ssize = blocksize;
-  char *s = (char *) alloc (ssize);
+  char *s = (char *)alloc (ssize);
   size_t bytes_read = 0;
   int c;
   while ((c = fgetc (f)) != EOF)
@@ -263,7 +262,7 @@ compile (const char *input, const char *output)
   schptr_t sptr = 0;
   const char *cs = s;
 
-  (void) parse_whitespace (&cs);
+  (void)parse_whitespace (&cs);
 
   if (!parse_program (&cs, &sptr))
     err_parse (cs);
@@ -284,9 +283,10 @@ compile (const char *input, const char *output)
       {
         // inside child
 #ifdef UBSANLIB
-        execl (CC, CC, "-o", output, asmtmp, "runtime.o", UBSANLIB, (char *) NULL);
+        execl (CC, CC, "-o", output, asmtmp, "runtime.o", UBSANLIB,
+               (char *)NULL);
 #else
-        execl (CC, CC, "-o", output, asmtmp, "runtime.o", (char *) NULL);
+        execl (CC, CC, "-o", output, asmtmp, "runtime.o", (char *)NULL);
 #endif
 
         // unreachable
@@ -319,7 +319,7 @@ find_system_tmpdir (void)
 
       if (tmpdir && *tmpdir != '\0')
         strncpy (real_tmpdir, tmpdir, FILE_PATH_MAX);
-      real_tmpdir[FILE_PATH_MAX-1] = '\0';
+      real_tmpdir[FILE_PATH_MAX - 1] = '\0';
     }
   return real_tmpdir;
 }
@@ -329,13 +329,15 @@ compile_program (const char *e)
 {
   schptr_t sptr = 0;
 
-  (void) parse_whitespace (&e);
+  (void)parse_whitespace (&e);
 
   if (!parse_program (&e, &sptr))
     err_parse (e);
 
   const char *tmpdir = find_system_tmpdir ();
-  char otemplate[FILE_PATH_MAX] = { 0, };
+  char otemplate[FILE_PATH_MAX] = {
+    0,
+  };
   strncpy (otemplate, tmpdir, FILE_PATH_MAX);
   strncat (otemplate, "/librattleXXXXXX.so", FILE_PATH_MAX - strlen (tmpdir));
   otemplate[FILE_PATH_MAX - 1] = '\0';
@@ -362,7 +364,8 @@ compile_program (const char *e)
     if (child == 0)
       {
         // inside child
-        execl (CC, CC, "-shared", "-fPIC", "-o", otemplate, asmtmp, "runtime.o", (char *) NULL);
+        execl (CC, CC, "-shared", "-fPIC", "-o", otemplate, asmtmp,
+               "runtime.o", (char *)NULL);
 
         // unreachable
         assert (false);
@@ -373,7 +376,7 @@ compile_program (const char *e)
   }
 
   // remove input file and close port
-    if (save_temps_p)
+  if (save_temps_p)
     printf ("Temporary asm source kept at `%s'\n", asmtmp);
   else
     unlink (asmtmp);
@@ -388,7 +391,7 @@ compile_program (const char *e)
 
     if (!handle)
       {
-        fprintf (stderr, "%s\n", dlerror());
+        fprintf (stderr, "%s\n", dlerror ());
         exit (EXIT_FAILURE);
       }
 
@@ -410,4 +413,3 @@ compile_program (const char *e)
   else
     unlink (otemplate);
 }
-

@@ -41,7 +41,6 @@ bool parse_imm_char (const char **, schptr_t *);
 bool parse_if (const char **, schptr_t *);
 bool parse_procedure_call (const char **, schptr_t *);
 
-
 // Helper parsing procedures
 
 bool parse_initial (const char **);
@@ -55,4 +54,3 @@ bool parse_char_sequence (const char **, const char *);
 bool parse_lparen (const char **);
 bool parse_rparen (const char **);
 bool parse_whitespace (const char **);
-

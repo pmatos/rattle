@@ -34,7 +34,16 @@ struct schprim;
 struct env;
 typedef void (*prim_emmiter) (FILE *, schptr_t, size_t, struct env *);
 
-typedef enum { SCH_PRIM, SCH_IF, SCH_ID, SCH_LET, SCH_EXPR_SEQ, SCH_PRIM_EVAL1, SCH_PRIM_EVAL2 } sch_type;
+typedef enum
+{
+  SCH_PRIM,
+  SCH_IF,
+  SCH_ID,
+  SCH_LET,
+  SCH_EXPR_SEQ,
+  SCH_PRIM_EVAL1,
+  SCH_PRIM_EVAL2
+} sch_type;
 
 typedef struct schtype
 {

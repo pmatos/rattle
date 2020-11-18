@@ -16,9 +16,9 @@
 
 #include "emit.h"
 
-#include <stdlib.h>
-#include <stdint.h>
 #include <inttypes.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 #include "err.h"
 
@@ -68,13 +68,14 @@ emit_asm_epilogue (FILE *f)
 void
 emit_asm_identifier (FILE *f, schptr_t sptr, env_t *env)
 {
-  schid_t *id = (schid_t *) sptr;
+  schid_t *id = (schid_t *)sptr;
   assert (id->type == SCH_ID);
 
   size_t si;
 
   // get the stack offset where the value of id is.
-  // issue a load from that stack location to obtain it's value and put it in rax
+  // issue a load from that stack location to obtain it's value and put it in
+  // rax
   if (env_ref (id, env, &si))
     fprintf (f, "    movq   -%zu(%%rsp), %%rax\n", si);
   else
@@ -147,29 +148,29 @@ emit_asm_expr (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxadd1 (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
-  const uint64_t cst = UINT64_C(1) << FX_SHIFT;
-  fprintf (f, "    addq $%" PRIu64", %%rax\n", cst);
+  const uint64_t cst = UINT64_C (1) << FX_SHIFT;
+  fprintf (f, "    addq $%" PRIu64 ", %%rax\n", cst);
 }
 
 void
 emit_asm_prim_fxsub1 (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
-  const uint64_t cst = UINT64_C(1) << FX_SHIFT;
+  const uint64_t cst = UINT64_C (1) << FX_SHIFT;
   fprintf (f, "    subq $%" PRIu64 ", %%rax\n", cst);
 }
 
 void
 emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -182,7 +183,7 @@ emit_asm_prim_fxzerop (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -195,7 +196,7 @@ emit_asm_prim_char_to_fixnum (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -208,7 +209,7 @@ emit_asm_prim_fixnum_to_char (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -224,7 +225,7 @@ emit_asm_prim_fixnump (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -232,7 +233,7 @@ emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si, env_t *env)
   fprintf (f, "    andq   $%" PRIu64 ", %%rax\n", BOOL_MASK);
   fprintf (f, "    cmpq   $%" PRIu64 ", %%rax\n", BOOL_TAG);
   fprintf (f, "    sete   %%al\n");
-  fprintf (f, "    salq   $%" PRIu8", %%rax\n", BOOL_SHIFT);
+  fprintf (f, "    salq   $%" PRIu8 ", %%rax\n", BOOL_SHIFT);
   fprintf (f, "    orq    $%" PRIu64 ", %%rax\n", BOOL_TAG);
 }
 
@@ -245,7 +246,7 @@ emit_asm_prim_booleanp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -259,7 +260,7 @@ emit_asm_prim_not (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -274,7 +275,7 @@ emit_asm_prim_charp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -289,7 +290,7 @@ emit_asm_prim_nullp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval1_t *pe = (schprim_eval1_t *) sptr;
+  schprim_eval1_t *pe = (schprim_eval1_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL1);
   emit_asm_expr (f, pe->arg1, si, env);
 
@@ -302,7 +303,7 @@ emit_asm_prim_fxlognot (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -318,7 +319,7 @@ emit_asm_prim_fxadd (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -339,7 +340,7 @@ emit_asm_prim_fxsub (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxmul (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -358,7 +359,7 @@ emit_asm_prim_fxmul (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxlogand (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -373,7 +374,7 @@ emit_asm_prim_fxlogand (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxlogor (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -388,7 +389,7 @@ emit_asm_prim_fxlogor (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxeq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -406,7 +407,7 @@ emit_asm_prim_fxeq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxlt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -426,7 +427,7 @@ emit_asm_prim_fxlt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxle (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -446,7 +447,7 @@ emit_asm_prim_fxle (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxgt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -466,7 +467,7 @@ emit_asm_prim_fxgt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_fxge (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -486,7 +487,7 @@ emit_asm_prim_fxge (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_chareq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -504,7 +505,7 @@ emit_asm_prim_chareq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_charlt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -524,7 +525,7 @@ emit_asm_prim_charlt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_charle (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -544,7 +545,7 @@ emit_asm_prim_charle (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_chargt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -564,7 +565,7 @@ emit_asm_prim_chargt (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_prim_charge (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schprim_eval2_t *pe = (schprim_eval2_t *) sptr;
+  schprim_eval2_t *pe = (schprim_eval2_t *)sptr;
   assert (pe->type == SCH_PRIM_EVAL2);
 
   schptr_t arg1 = pe->arg1;
@@ -591,7 +592,7 @@ emit_asm_label (FILE *f, char *label)
 void
 emit_asm_if (FILE *f, schptr_t p, size_t si, env_t *env)
 {
-  schif_t *pif = (schif_t *) p;
+  schif_t *pif = (schif_t *)p;
   assert (pif->type == SCH_IF);
 
   char elsel[LABEL_MAX];
@@ -599,7 +600,6 @@ emit_asm_if (FILE *f, schptr_t p, size_t si, env_t *env)
 
   char endl[LABEL_MAX];
   gen_new_temp_label (endl);
-
 
   emit_asm_expr (f, pif->condition, si, env);
 
@@ -620,7 +620,7 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
   // Add definitions for all of them into an environment and
   // emit code for the body of the let with the environment properly
   // filled.
-  schlet_t *let = (schlet_t *) sptr;
+  schlet_t *let = (schlet_t *)sptr;
   assert (let->type == SCH_LET);
 
   // Evaluate each of the bindings in the bindings list
@@ -643,7 +643,7 @@ emit_asm_let (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void
 emit_asm_expr_seq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
-  schexprseq_t *seq = (schexprseq_t *) sptr;
+  schexprseq_t *seq = (schexprseq_t *)sptr;
   assert (seq->type == SCH_EXPR_SEQ);
 
   expression_list_t *s = seq->seq;

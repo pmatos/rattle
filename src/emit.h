@@ -21,11 +21,11 @@
 #include "env.h"
 
 #if defined(__APPLE__) || defined(__MACH__)
-#  define ASM_SYMBOL_PREFIX "_"
+#define ASM_SYMBOL_PREFIX "_"
 #elif defined(__linux__)
-#  define ASM_SYMBOL_PREFIX ""
+#define ASM_SYMBOL_PREFIX ""
 #else
-#  error "Unsupported platform"
+#error "Unsupported platform"
 #endif
 
 // Primitive emitter prototypes
@@ -62,4 +62,3 @@ void emit_asm_prim_charlt (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_prim_charle (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_prim_chargt (FILE *, schptr_t, size_t, env_t *);
 void emit_asm_prim_charge (FILE *, schptr_t, size_t, env_t *);
-

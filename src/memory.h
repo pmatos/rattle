@@ -17,5 +17,5 @@
 
 #include <stdio.h>
 
-void *alloc (size_t) __attribute__ ((malloc)) __attribute__ ((alloc_size(1)));
+void *alloc (size_t) __attribute__ ((malloc)) __attribute__ ((alloc_size (1)));
 void *grow (void *, size_t);

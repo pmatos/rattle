@@ -42,7 +42,7 @@ err_parse (const char *s)
   exit (EXIT_FAILURE);
 }
 
-__attribute__((noreturn)) void
+__attribute__ ((noreturn)) void
 err_unreachable (const char *s)
 {
   fprintf (stderr, "error: unreachable - `%s'\n", s);

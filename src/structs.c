@@ -80,7 +80,7 @@ free_prim_eval2 (schprim_eval2_t *e)
   free (e);
 }
 
-#define SCHTYPE(e) (((schtype_t *) e)->type)
+#define SCHTYPE(e) (((schtype_t *)e)->type)
 
 void
 free_expression (schptr_t e)
@@ -95,27 +95,27 @@ free_expression (schptr_t e)
       break;
 
     case SCH_IF:
-      free_if ((schif_t *) e);
+      free_if ((schif_t *)e);
       break;
 
     case SCH_ID:
-      free_identifier ((schid_t *) e);
+      free_identifier ((schid_t *)e);
       break;
 
     case SCH_LET:
-      free_let ((schlet_t *) e);
+      free_let ((schlet_t *)e);
       break;
 
     case SCH_EXPR_SEQ:
-      free_expr_seq ((schexprseq_t *) e);
+      free_expr_seq ((schexprseq_t *)e);
       break;
 
     case SCH_PRIM_EVAL1:
-      free_prim_eval1 ((schprim_eval1_t *) e);
+      free_prim_eval1 ((schprim_eval1_t *)e);
       break;
 
     case SCH_PRIM_EVAL2:
-      free_prim_eval2 ((schprim_eval2_t *) e);
+      free_prim_eval2 ((schprim_eval2_t *)e);
       break;
 
     default:

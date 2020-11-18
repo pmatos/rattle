@@ -22,7 +22,8 @@
 
 #include "memory.h"
 
-env_t *make_env ()
+env_t *
+make_env ()
 {
   return NULL;
 }
@@ -44,7 +45,8 @@ env_append (env_t *env1, env_t *env2)
     return env2;
 
   env_t *ptr = env1;
-  for (; ptr->next != NULL; ptr = ptr->next);
+  for (; ptr->next != NULL; ptr = ptr->next)
+    ;
   ptr->next = env2;
   return env1;
 }
@@ -75,5 +77,7 @@ free_env_partial (env_t *e1, const env_t *e2, bool shallow)
       e1 = tmp;
     }
   if (!e1 && e2)
-    fprintf (stderr, "internal warning: freeing partial env ended up freeing whole env\n");
+    fprintf (
+        stderr,
+        "internal warning: freeing partial env ended up freeing whole env\n");
 }
