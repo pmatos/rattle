@@ -23,7 +23,6 @@
 #include "err.h"
 #include "memory.h"
 #include "primitives.h"
-#include "structs.h"
 
 // Comments behave like whitespaces so they are removed with it
 bool

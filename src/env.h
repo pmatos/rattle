@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "structs.h"
+#include "ast.h"
 
 ///////////////////////////////////////////////////////////////////////
 //
@@ -25,15 +25,15 @@
 //
 ///////////////////////////////////////////////////////////////////////
 
-typedef struct env
+struct env
 {
-  schid_t *id;
+  struct schid *id;
   size_t si;
   struct env *next;
-} env_t;
+};
 
-env_t *make_env ();
-env_t *env_add (schid_t *, size_t, env_t *);
-env_t *env_append (env_t *, env_t *);
-bool env_ref (schid_t *, env_t *, size_t *);
-void free_env_partial (env_t *, const env_t *, bool);
+struct env *make_env ();
+struct env *env_add (struct schid *, size_t, struct env *);
+struct env *env_append (struct env *, struct env *);
+bool env_ref (struct schid *, struct env *, size_t *);
+void free_env_partial (struct env *, const struct env *, bool);

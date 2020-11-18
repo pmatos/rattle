@@ -45,82 +45,82 @@ typedef enum
   SCH_PRIM_EVAL2
 } sch_type;
 
-typedef struct schtype
+struct schtype
 {
   sch_type type;
-} schtype_t;
+};
 
-typedef struct schprim
+struct schprim
 {
   sch_type type;         // Type (always SCH_PRIM)
   char *name;            // Primitive name
   unsigned int argcount; // Number of arguments for the primitive
   prim_emmiter emitter;  // Primitive function emmiter
-} schprim_t;
+};
 
-typedef struct schprim_eval
+struct schprim_eval
 {
   sch_type type;
-  const schprim_t *prim;
-} schprim_eval_t;
+  const struct schprim *prim;
+};
 
-typedef struct schprim_eval1
+struct schprim_eval1
 {
   struct schprim_eval;
   schptr_t arg1;
-} schprim_eval1_t;
+};
 
-typedef struct schprim_eval2
+struct schprim_eval2
 {
   struct schprim_eval;
   schptr_t arg1;
   schptr_t arg2;
-} schprim_eval2_t;
+};
 
-typedef struct schif
+struct schif
 {
   sch_type type;
   schptr_t condition; // if conditional
   schptr_t thenv;     // then value
   schptr_t elsev;     // else value
-} schif_t;
+};
 
-typedef struct schid
+struct schid
 {
   sch_type type;
   char *name;
-} schid_t;
+};
 
-typedef struct binding_spec_list
+struct binding_spec_list
 {
-  schid_t *id;
+  struct schid *id;
   schptr_t expr;
   struct binding_spec_list *next;
-} binding_spec_list_t;
+};
 
-typedef struct schlet
+struct schlet
 {
   sch_type type;
   bool star_p;
-  binding_spec_list_t *bindings;
+  struct binding_spec_list *bindings;
   schptr_t body;
-} schlet_t;
+};
 
-typedef struct expression_list
+struct expression_list
 {
   schptr_t expr;
   struct expression_list *next;
-} expression_list_t;
+};
 
-typedef struct schexprseq
+struct ast_schexprseq
 {
   sch_type type;
-  expression_list_t *seq;
-} schexprseq_t;
+  struct expression_list *seq;
+};
 
-void free_expression (schptr_t);
-void free_expression_list (expression_list_t *);
-void free_identifier (schid_t *);
-void free_binding_spec_list (binding_spec_list_t *);
+void free_ast_expression (schptr_t);
+void free_ast_expression_list (struct expression_list *);
+void free_ast_identifier (struct schid *);
+void free_ast_binding_spec_list (struct binding_spec_list *);
 
-schid_t *clone_schid (const schid_t *);
+struct schid *clone_ast_schid (const struct schid *);

@@ -32,7 +32,7 @@
 #include "err.h"
 #include "memory.h"
 #include "parse.h"
-#include "structs.h"
+#include "ast.h"
 
 #include "common.h"
 #include "config.h"

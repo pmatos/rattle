@@ -1,6 +1,6 @@
 # Rattle Makefile
 .PHONY: all
-all: rattle runtime.o
+all: rattle runtime.o check-format
 
 CFLAGS := $(CFLAGS)
 
@@ -49,6 +49,7 @@ CFLAGS += -Werror -Wall -Wextra -Wshadow
 # TODO: make runtime.c also depend on headers
 
 SRCS := $(wildcard src/*.c)
+HDRS := $(wildcard src/*.h)
 OBJS := $(SRCS:.c=.o)
 
 .PHONY: depend
@@ -104,9 +105,16 @@ itest:
 	$(TEST_PREFIX) ./rattle -o fxadd1 -c tests/fxadd1.rl && test `./fxadd1` = "190"
 	$(TEST_PREFIX) ./rattle -o primitives-1 -c tests/primitives-1.rl && test `./primitives-1` = "#f"
 
+.PHONY: compile_commands.json
 compile_commands.json:
-	bear $(MAKE)
+	rm -f $@
+	$(MAKE) clean
+	bear $(MAKE) -n
 
 .PHONY: clean
 clean:
 	$(RM) rattle $(OBJS) config.h .depend
+
+.PHONY: check-format
+check-format: $(SRCS) $(HDRS) src/runtime/runtime.c
+	clang-format --Werror -n $<
