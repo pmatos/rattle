@@ -26,6 +26,12 @@ LDFLAGS += -fsanitize=undefined
 UBSANLIB := "-lubsan"
 endif
 
+ifdef ASAN
+CFLAGS +=  -fsanitize=address
+LDFLAGS += -fsanitize=address
+UBSANLIB := "-lasan"
+endif
+
 else ifdef COVERAGE	
 CFLAGS += -O0 -g
 LDFLAGS += --coverage

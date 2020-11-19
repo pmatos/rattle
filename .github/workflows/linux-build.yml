@@ -104,3 +104,30 @@ jobs:
         version: '7.7'
     - name: Run Tests
       run: make test
+
+  buildtest-asan:
+
+    runs-on: ubuntu-latest
+    container: debian:sid-slim
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        apt-get update 
+        apt-get install -y make gcc gcc-10 g++ g++-10 sudo curl
+    - name: Versions
+      env:
+        CC: gcc-10
+      run: |
+        cc --version
+    - name: Build
+      run: make CC=gcc-10 DEBUG=1 ASAN=1
+    - uses: Bogdanp/setup-racket@v0.8
+      with:
+        architecture: 'x64'
+        distribution: 'full'
+        variant: 'CS'
+        version: '7.7'
+    - name: Run Tests
+      run: make test
