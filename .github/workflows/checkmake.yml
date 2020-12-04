@@ -20,6 +20,7 @@ jobs:
     - name: Build checkmake
       env:
         BUILDER_NAME: "Paulo Matos"
+        BUILDER_EMAIL: "pmatos@linki.tools"
       run: |
         go get github.com/mrtazz/checkmake
         cd $GOPATH/src/github.com/mrtazz/checkmake
