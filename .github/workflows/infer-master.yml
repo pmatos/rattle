@@ -19,7 +19,7 @@ jobs:
         apt-get install -y make curl xz-utils libsqlite3-dev python2.7 libtinfo5 gcc
     - name: Install infer
       env:
-        VERSION: 0.17.0
+        VERSION: 1.0.0
       run: |
         curl -sSL "https://github.com/facebook/infer/releases/download/v$VERSION/infer-linux64-v$VERSION.tar.xz" | tar -C /opt -xJ 
         ln -s "/opt/infer-linux64-v$VERSION/bin/infer" /usr/local/bin/infer
