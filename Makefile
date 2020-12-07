@@ -1,6 +1,6 @@
 # Rattle Makefile
 .PHONY: all
-all: rattle runtime.o check-format
+all: rattle runtime.o
 
 CFLAGS := $(CFLAGS)
 

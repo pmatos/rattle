@@ -1,0 +1,18 @@
+name: Check Format
+
+on: [push, pull_request]
+
+jobs:
+  check-format:
+
+    runs-on: ubuntu-latest
+    container: debian:sid-slim
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install dependencies
+      run: |
+        apt-get update
+        apt-get install -y make clang-format
+    - name: Build
+      run: make check-format
