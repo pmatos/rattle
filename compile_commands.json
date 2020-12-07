@@ -16,11 +16,34 @@
             "-Wextra",
             "-Wshadow",
             "-o",
-            "src/env.o",
-            "src/env.c"
+            "src/memory.o",
+            "src/memory.c"
         ],
         "directory": "/home/pmatos/dev/rattle",
-        "file": "src/env.c"
+        "file": "src/memory.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/rattle.o",
+            "src/rattle.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/rattle.c"
     },
     {
         "arguments": [
@@ -44,6 +67,29 @@
         ],
         "directory": "/home/pmatos/dev/rattle",
         "file": "src/structs.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/env.o",
+            "src/env.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/env.c"
     },
     {
         "arguments": [
@@ -90,52 +136,6 @@
         ],
         "directory": "/home/pmatos/dev/rattle",
         "file": "src/parse.c"
-    },
-    {
-        "arguments": [
-            "cc",
-            "-c",
-            "-D_DEFAULT_SOURCE",
-            "-DNDEBUG",
-            "-I.",
-            "-std=gnu11",
-            "-fms-extensions",
-            "-O3",
-            "-flto",
-            "-march=native",
-            "-Werror",
-            "-Wall",
-            "-Wextra",
-            "-Wshadow",
-            "-o",
-            "src/memory.o",
-            "src/memory.c"
-        ],
-        "directory": "/home/pmatos/dev/rattle",
-        "file": "src/memory.c"
-    },
-    {
-        "arguments": [
-            "cc",
-            "-c",
-            "-D_DEFAULT_SOURCE",
-            "-DNDEBUG",
-            "-I.",
-            "-std=gnu11",
-            "-fms-extensions",
-            "-O3",
-            "-flto",
-            "-march=native",
-            "-Werror",
-            "-Wall",
-            "-Wextra",
-            "-Wshadow",
-            "-o",
-            "src/rattle.o",
-            "src/rattle.c"
-        ],
-        "directory": "/home/pmatos/dev/rattle",
-        "file": "src/rattle.c"
     },
     {
         "arguments": [
