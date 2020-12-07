@@ -1,0 +1,163 @@
+[
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/env.o",
+            "src/env.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/env.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/structs.o",
+            "src/structs.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/structs.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/emit.o",
+            "src/emit.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/emit.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/parse.o",
+            "src/parse.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/parse.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/memory.o",
+            "src/memory.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/memory.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/rattle.o",
+            "src/rattle.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/rattle.c"
+    },
+    {
+        "arguments": [
+            "cc",
+            "-c",
+            "-D_DEFAULT_SOURCE",
+            "-DNDEBUG",
+            "-I.",
+            "-std=gnu11",
+            "-fms-extensions",
+            "-O3",
+            "-flto",
+            "-march=native",
+            "-Werror",
+            "-Wall",
+            "-Wextra",
+            "-Wshadow",
+            "-o",
+            "src/err.o",
+            "src/err.c"
+        ],
+        "directory": "/home/pmatos/dev/rattle",
+        "file": "src/err.c"
+    }
+]
