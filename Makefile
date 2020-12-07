@@ -115,5 +115,5 @@ clean:
 	$(RM) rattle $(OBJS) config.h $(DEPS)
 
 .PHONY: check-format
-check-format: $(SRCS) $(HDRS) src/runtime/runtime.c
-	clang-format --Werror -n $<
+check-format:
+	$(foreach file,$(SRCS) $(HDRS),clang-format --Werror -n $(file);)
