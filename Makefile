@@ -51,22 +51,14 @@ CFLAGS += -Werror -Wall -Wextra -Wshadow
 SRCS := $(wildcard src/*.c)
 HDRS := $(wildcard src/*.h)
 OBJS := $(SRCS:.c=.o)
-
-.PHONY: depend
-depend: .depend
-.depend: $(SRCS) config.h
-	rm -f ./.depend
-	$(CC) $(CFLAGS) -MM $(SRCS) -I. -MF ./.depend
-
-include .depend
-
-# Rules
-rattle.c: config.h
-src/%.o: src/%.c
-	$(CC) $(CPPFLAGS) -I. $(CFLAGS) $(EXTRA_CFLAGS) -c $< -o $@
+DEPS := $(SRCS:.c=.d)
 
 rattle: $(OBJS)
 	$(CC) $^ -o $@ $(LDFLAGS)
+
+# Rules
+src/%.o: src/%.c
+	$(CC) $(CPPFLAGS) -I. $(CFLAGS) $(EXTRA_CFLAGS) -c $< -o $@
 
 runtime.o: src/runtime/runtime.c
 	$(CC) -fPIC $(CPPFLAGS) $(CFLAGS) -c $< -o $@
@@ -78,6 +70,13 @@ ifdef UBSAN
 else
 	echo "/* #define UBSANLIB */" >> $@
 endif
+
+src/%.d: src/%.c config.h
+	set -e; \
+         rm -f $@; \
+         $(CC) -MM $(CPPFLAGS) -I. $< > $@.$$$$; sed 's,\($*\)\.o[ :]*,\1.o $@ : ,g' < $@.$$$$ > $@; \
+         rm -f $@.$$$$
+include $(DEPS)
 
 .PHONY: test btests afltests itests btest
 test: btest afltest itest
@@ -113,7 +112,7 @@ compile_commands.json:
 
 .PHONY: clean
 clean:
-	$(RM) rattle $(OBJS) config.h .depend
+	$(RM) rattle $(OBJS) config.h $(DEPS)
 
 .PHONY: check-format
 check-format: $(SRCS) $(HDRS) src/runtime/runtime.c
