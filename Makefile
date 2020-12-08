@@ -28,7 +28,7 @@ endif
 
 ifdef ASAN
 CFLAGS +=  -fsanitize=address
-LDFLAGS += -fsanitize=address
+LDFLAGS += -fsanitize=address -lasan
 UBSANLIB := "-lasan"
 endif
 
