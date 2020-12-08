@@ -13,6 +13,6 @@ jobs:
     - name: Install dependencies
       run: |
         apt-get update
-        apt-get install -y make clang-format
+        apt-get install -y make clang-format gcc
     - name: Build
       run: make check-format
