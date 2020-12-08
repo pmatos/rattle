@@ -25,7 +25,7 @@
 
 // Runtime entry point.
 // The compiler generated code is linked here.
-extern schptr_t scheme_entry (uint8_t *);
+extern schptr_t scheme_entry (uint8_t *, uint8_t *);
 
 static void
 print_char (char code)
@@ -99,6 +99,8 @@ getpagesz (void)
 
 // Stack size in words (enough for 16K words)
 #define WORD_STACK_SIZE (16 * 1024)
+// Heap size in words (enough for 1M words)
+#define WORD_HEAP_SIZE (1024 * 1024)
 
 /*
   | ...                      |
@@ -181,11 +183,20 @@ deallocate_protected_space (uint8_t *p, size_t size)
 void
 runtime_startup (void)
 {
-  size_t stack_size
-      = (WORD_STACK_SIZE * WORD_BYTES); // 16K words of space in stack
+  // allocate stack
+  size_t stack_size = (WORD_STACK_SIZE * WORD_BYTES); // 16K words of space in stack
   uint8_t *stack_top = allocate_protected_space (stack_size);
   uint8_t *stack_base = stack_top + stack_size;
-  print_ptr (scheme_entry (stack_base));
+
+  // allocate heap
+  size_t heap_size = (WORD_HEAP_SIZE * WORD_BYTES); // 1M words of space in heap
+  uint8_t *heap_top = allocate_protected_space (heap_size);
+  uint8_t *heap_base = heap_top + heap_size;
+  
+  print_ptr (scheme_entry (stack_base, heap_base));
+
+  // deallocate spaces
+  deallocate_protected_space (heap_top, heap_size);
   deallocate_protected_space (stack_top, stack_size);
 }
 

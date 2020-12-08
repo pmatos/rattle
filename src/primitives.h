@@ -45,6 +45,13 @@ static const schprim_t primitives[]
         { SCH_PRIM, "char<=", 2, emit_asm_prim_charle },
         { SCH_PRIM, "char<", 2, emit_asm_prim_charlt },
         { SCH_PRIM, "char>=", 2, emit_asm_prim_charge },
-        { SCH_PRIM, "char>", 2, emit_asm_prim_chargt } };
+        { SCH_PRIM, "char>", 2, emit_asm_prim_chargt },
+        { SCH_PRIM, "cons", 2, emit_asm_prim_cons },
+        { SCH_PRIM, "pair?", 1, emit_asm_prim_pairp },
+        { SCH_PRIM, "car", 1, emit_asm_prim_car },
+        { SCH_PRIM, "cdr", 1, emit_asm_prim_cdr },
+        { SCH_PRIM, "set-car!", 2, emit_asm_prim_set_car },
+        { SCH_PRIM, "set-cdr!", 2, emit_asm_prim_set_cdr } };
+
 static const size_t primitives_count
     = sizeof (primitives) / sizeof (primitives[0]);
