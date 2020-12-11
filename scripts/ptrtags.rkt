@@ -54,13 +54,22 @@
   (bveq (bvand v (tag-extend bool-mask))
         (tag-extend bool-tag)))
 
+(define-symbolic pair-tag (bitvector tag-bw))
+(define-symbolic pair-shift native_t)
+(define-symbolic bool-mask (bitvector tag-bw))
+
+(define (pair? v)
+  (bveq (bvand v (tag-extend pair-mask))
+        (tag-extend pair-tag)))
+
 (define (valid? v)
   (= 1
      (+ (if (ptr? v) 1 0)
         (if (char? v) 1 0)
         (if (fx? v) 1 0)
         (if (bool? v) 1 0)
-        (if (null? v) 1 0))))
+        (if (null? v) 1 0)
+        (if (pair? v) 1 0))))
 
 ;; Encoding procedures
 (define (fx-encode i)
@@ -108,6 +117,11 @@
    #:guarantee
    (begin
 
+     ;; pair constraints
+     (assert (and (valid? (pair-encode pair-value))
+                  (pair? (pair-encode pair-value))
+                  (= pair-value (pair-decode (pair-encode pair-value)))))
+     
      ;; bool constraints
      (assert (and (valid? (bool-encode bool-value))
                   (bool? (bool-encode bool-value))
@@ -152,6 +166,10 @@
 (printf "#define BOOL_TAG 0x~x~n" (bitvector->natural (evaluate bool-tag sol)))
 (printf "#define BOOL_MASK 0x~x~n" (bitvector->natural (evaluate bool-mask sol)))
 (printf "#define BOOL_SHIFT ~a~n" (bitvector->natural (evaluate bool-shift sol)))
+(printf "//~n")
+(printf "#define PAIR_TAG 0x~x~n" (bitvector->natural (evaluate pair-tag sol)))
+(printf "#define PAIR_MASK 0x~x~n" (bitvector->natural (evaluate pair-mask sol)))
+(printf "#define PAIR_SHIFT ~a~n" (bitvector->natural (evaluate pair-shift sol)))
 (printf "//~n")
 (printf "#define NULL_CST 0x~x~n" (bitvector->natural (evaluate null-constant sol)))
 (printf "#define TRUE_CST 0x~x~n" (bitvector->natural (evaluate true-constant sol)))
