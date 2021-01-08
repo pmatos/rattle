@@ -665,21 +665,26 @@ emit_asm_expr_seq (FILE *f, schptr_t sptr, size_t si, env_t *env)
 void emit_asm_prim_cons (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
 }
+
 void emit_asm_prim_pairp (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
 }
+
 void
 emit_asm_prim_car (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
 }
+
 void
 emit_asm_prim_cdr (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
 }
+
 void
 emit_asm_prim_set_car (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
 }
+
 void
 emit_asm_prim_set_cdr (FILE *f, schptr_t sptr, size_t si, env_t *env)
 {
