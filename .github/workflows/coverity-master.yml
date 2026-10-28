@@ -8,7 +8,7 @@ on:
 jobs:
   covbuild:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     container: debian:buster-slim
 
     steps:
